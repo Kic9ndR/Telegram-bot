@@ -1,8 +1,11 @@
+import os
 from aiogram import types, Router, F
 from aiogram.filters import CommandStart, Command, or_f
+from dotenv import find_dotenv, load_dotenv
 from filters.chat_types import ChatFilter
 
 from kbrd import reply
+
 
 user_router = Router()
 user_router.message.filter(ChatFilter(['private']))
@@ -11,7 +14,7 @@ user_router.message.filter(ChatFilter(['private']))
 
 @user_router.message(or_f(Command("start"), (F.text.lower() == "в начало ↩️"), (F.text.lower() == "старт")))
 async def start_cmd(message: types.Message):
-    await message.answer('Что Вас интересует?', reply_markup=reply.start_kb)
+        await message.answer('Что Вас интересует?', reply_markup=reply.start_kb)
 
 #------------------------------------------------------------------------------------------------------
 @user_router.message(or_f(Command('current_work'), (F.text.lower() == "текущая работа ⏱")))
@@ -37,6 +40,3 @@ async def about_cmd(message: types.Message):
 @user_router.message(or_f(Command('timetable'), (F.text.lower() == "график работы 🗓")))
 async def timetable_cmd(message: types.Message):
     await message.answer('График работы:', reply_markup=reply.timetable_kb)
-
-
-

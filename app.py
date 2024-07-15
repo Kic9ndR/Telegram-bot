@@ -8,8 +8,9 @@ from dotenv import load_dotenv, find_dotenv
 load_dotenv(find_dotenv())
 
 from handlers.user_private import user_router
-from common.bot_cmds_list import private
 from handlers.user_group import user_group
+from handlers.admin_private import admin_router
+from common.bot_cmds_list import private
 
 ALLOWED_UPDATES = ['message, edited_message']
 
@@ -18,6 +19,7 @@ db = Dispatcher()
 
 db.include_router(user_router)
 db.include_router(user_group)
+db.include_router(admin_router)
 
 #----------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------
