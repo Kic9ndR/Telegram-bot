@@ -1,4 +1,5 @@
-from aiogram.types import ReplyKeyboardMarkup, ReplyKeyboardRemove, KeyboardButton
+from aiogram.types import (ReplyKeyboardMarkup, ReplyKeyboardRemove,
+                            KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup)
 
 
 del_kb = ReplyKeyboardRemove()
@@ -38,6 +39,17 @@ admin_kb = ReplyKeyboardMarkup(
     input_field_placeholder="Выберите нужный пункт:"
 )
 
+admin_nav = ReplyKeyboardMarkup(
+    keyboard=[
+        [
+            KeyboardButton(text='Назад'),
+            KeyboardButton(text='Отмена'),
+        ],
+    ],
+    resize_keyboard=True,
+    input_field_placeholder="Назад - вернуться на шаг назад. Отмена - отменить создание"
+)
+
 #----------------------------------------------------------------------------------
 timetable_kb = ReplyKeyboardMarkup(
     keyboard=[
@@ -57,7 +69,6 @@ timetable_kb = ReplyKeyboardMarkup(
 send_work_kb = ReplyKeyboardMarkup(
     keyboard=[
         [
-            KeyboardButton(text='Загрузить 📥'),
             KeyboardButton(text='В начало ↩️'),
         ],
     ],

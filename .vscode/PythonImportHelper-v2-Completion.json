@@ -1,5 +1,55 @@
 [
     {
+        "label": "calendar",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "calendar",
+        "description": "calendar",
+        "detail": "calendar",
+        "documentation": {}
+    },
+    {
+        "label": "locale",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "locale",
+        "description": "locale",
+        "detail": "locale",
+        "documentation": {}
+    },
+    {
+        "label": "User",
+        "importPath": "aiogram.types",
+        "description": "aiogram.types",
+        "isExtraImport": true,
+        "detail": "aiogram.types",
+        "documentation": {}
+    },
+    {
+        "label": "InlineKeyboardMarkup",
+        "importPath": "aiogram.types",
+        "description": "aiogram.types",
+        "isExtraImport": true,
+        "detail": "aiogram.types",
+        "documentation": {}
+    },
+    {
+        "label": "InlineKeyboardButton",
+        "importPath": "aiogram.types",
+        "description": "aiogram.types",
+        "isExtraImport": true,
+        "detail": "aiogram.types",
+        "documentation": {}
+    },
+    {
+        "label": "CallbackQuery",
+        "importPath": "aiogram.types",
+        "description": "aiogram.types",
+        "isExtraImport": true,
+        "detail": "aiogram.types",
+        "documentation": {}
+    },
+    {
         "label": "BotCommand",
         "importPath": "aiogram.types",
         "description": "aiogram.types",
@@ -56,6 +106,94 @@
         "documentation": {}
     },
     {
+        "label": "InlineKeyboardButton",
+        "importPath": "aiogram.types",
+        "description": "aiogram.types",
+        "isExtraImport": true,
+        "detail": "aiogram.types",
+        "documentation": {}
+    },
+    {
+        "label": "InlineKeyboardMarkup",
+        "importPath": "aiogram.types",
+        "description": "aiogram.types",
+        "isExtraImport": true,
+        "detail": "aiogram.types",
+        "documentation": {}
+    },
+    {
+        "label": "datetime",
+        "importPath": "datetime",
+        "description": "datetime",
+        "isExtraImport": true,
+        "detail": "datetime",
+        "documentation": {}
+    },
+    {
+        "label": "datetime",
+        "importPath": "datetime",
+        "description": "datetime",
+        "isExtraImport": true,
+        "detail": "datetime",
+        "documentation": {}
+    },
+    {
+        "label": "timedelta",
+        "importPath": "datetime",
+        "description": "datetime",
+        "isExtraImport": true,
+        "detail": "datetime",
+        "documentation": {}
+    },
+    {
+        "label": "Optional",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "Enum",
+        "importPath": "enum",
+        "description": "enum",
+        "isExtraImport": true,
+        "detail": "enum",
+        "documentation": {}
+    },
+    {
+        "label": "BaseModel",
+        "importPath": "pydantic",
+        "description": "pydantic",
+        "isExtraImport": true,
+        "detail": "pydantic",
+        "documentation": {}
+    },
+    {
+        "label": "conlist",
+        "importPath": "pydantic",
+        "description": "pydantic",
+        "isExtraImport": true,
+        "detail": "pydantic",
+        "documentation": {}
+    },
+    {
+        "label": "Field",
+        "importPath": "pydantic",
+        "description": "pydantic",
+        "isExtraImport": true,
+        "detail": "pydantic",
+        "documentation": {}
+    },
+    {
+        "label": "CallbackData",
+        "importPath": "aiogram.filters.callback_data",
+        "description": "aiogram.filters.callback_data",
+        "isExtraImport": true,
+        "detail": "aiogram.filters.callback_data",
+        "documentation": {}
+    },
+    {
         "label": "Filter",
         "importPath": "aiogram.filters",
         "description": "aiogram.filters",
@@ -96,7 +234,7 @@
         "documentation": {}
     },
     {
-        "label": "CommandStart",
+        "label": "Command",
         "importPath": "aiogram.filters",
         "description": "aiogram.filters",
         "isExtraImport": true,
@@ -104,7 +242,7 @@
         "documentation": {}
     },
     {
-        "label": "Command",
+        "label": "StateFilter",
         "importPath": "aiogram.filters",
         "description": "aiogram.filters",
         "isExtraImport": true,
@@ -344,6 +482,15 @@
         "documentation": {}
     },
     {
+        "label": "asyncio",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "asyncio",
+        "description": "asyncio",
+        "detail": "asyncio",
+        "documentation": {}
+    },
+    {
         "label": "os",
         "kind": 6,
         "isExtraImport": true,
@@ -353,22 +500,6 @@
         "documentation": {}
     },
     {
-        "label": "find_dotenv",
-        "importPath": "dotenv",
-        "description": "dotenv",
-        "isExtraImport": true,
-        "detail": "dotenv",
-        "documentation": {}
-    },
-    {
-        "label": "load_dotenv",
-        "importPath": "dotenv",
-        "description": "dotenv",
-        "isExtraImport": true,
-        "detail": "dotenv",
-        "documentation": {}
-    },
-    {
         "label": "load_dotenv",
         "importPath": "dotenv",
         "description": "dotenv",
@@ -382,15 +513,6 @@
         "description": "dotenv",
         "isExtraImport": true,
         "detail": "dotenv",
-        "documentation": {}
-    },
-    {
-        "label": "asyncio",
-        "kind": 6,
-        "isExtraImport": true,
-        "importPath": "asyncio",
-        "description": "asyncio",
-        "detail": "asyncio",
         "documentation": {}
     },
     {
@@ -423,6 +545,114 @@
         "description": "common.bot_cmds_list",
         "isExtraImport": true,
         "detail": "common.bot_cmds_list",
+        "documentation": {}
+    },
+    {
+        "label": "GenericCalendar",
+        "kind": 6,
+        "importPath": "calendar.base",
+        "description": "calendar.base",
+        "peekOfCode": "class GenericCalendar:\n    def __init__(\n        self,\n        locale: str = None,\n        cancel_btn: str = None,\n        today_btn: str = None,\n        show_alerts: bool = False\n    ) -> None:\n        \"\"\"Pass labels if you need to have alternative language of buttons\n        Parameters:",
+        "detail": "calendar.base",
+        "documentation": {}
+    },
+    {
+        "label": "SimpleCalendar",
+        "kind": 6,
+        "importPath": "calendar.calendar",
+        "description": "calendar.calendar",
+        "peekOfCode": "class SimpleCalendar(GenericCalendar):\n    ignore_callback = SimpleCalendarCallback(act=SimpleCalAct.ignore).pack()  # placeholder for no answer buttons\n    async def start_calendar(\n        self,\n        year: int = datetime.now().year,\n        month: int = datetime.now().month\n    ) -> InlineKeyboardMarkup:\n        \"\"\"\n        Creates an inline keyboard with the provided year and month\n        :param int year: Year to use in the calendar, if None the current year is used.",
+        "detail": "calendar.calendar",
+        "documentation": {}
+    },
+    {
+        "label": "SimpleCalAct",
+        "kind": 6,
+        "importPath": "calendar.schemas",
+        "description": "calendar.schemas",
+        "peekOfCode": "class SimpleCalAct(str, Enum):\n    ignore = 'IGNORE'\n    prev_y = 'PREV-YEAR'\n    next_y = 'NEXT-YEAR'\n    prev_m = 'PREV-MONTH'\n    next_m = 'NEXT-MONTH'\n    cancel = 'CANCEL'\n    today = 'TODAY'\n    day = 'DAY'\nclass DialogCalAct(str, Enum):",
+        "detail": "calendar.schemas",
+        "documentation": {}
+    },
+    {
+        "label": "DialogCalAct",
+        "kind": 6,
+        "importPath": "calendar.schemas",
+        "description": "calendar.schemas",
+        "peekOfCode": "class DialogCalAct(str, Enum):\n    ignore = 'IGNORE'\n    set_y = 'SET-YEAR'\n    set_m = 'SET-MONTH'\n    prev_y = 'PREV-YEAR'\n    next_y = 'NEXT-YEAR'\n    cancel = 'CANCEL'\n    start = 'START'\n    day = 'SET-DAY'\nclass CalendarCallback(CallbackData, prefix=\"calendar\"):",
+        "detail": "calendar.schemas",
+        "documentation": {}
+    },
+    {
+        "label": "CalendarCallback",
+        "kind": 6,
+        "importPath": "calendar.schemas",
+        "description": "calendar.schemas",
+        "peekOfCode": "class CalendarCallback(CallbackData, prefix=\"calendar\"):\n    act: str\n    year: Optional[int] = None\n    month: Optional[int] = None\n    day: Optional[int] = None\nclass SimpleCalendarCallback(CalendarCallback, prefix=\"simple_calendar\"):\n    act: SimpleCalAct\nclass DialogCalendarCallback(CalendarCallback, prefix=\"dialog_calendar\"):\n    act: DialogCalAct\nclass CalendarLabels(BaseModel):",
+        "detail": "calendar.schemas",
+        "documentation": {}
+    },
+    {
+        "label": "SimpleCalendarCallback",
+        "kind": 6,
+        "importPath": "calendar.schemas",
+        "description": "calendar.schemas",
+        "peekOfCode": "class SimpleCalendarCallback(CalendarCallback, prefix=\"simple_calendar\"):\n    act: SimpleCalAct\nclass DialogCalendarCallback(CalendarCallback, prefix=\"dialog_calendar\"):\n    act: DialogCalAct\nclass CalendarLabels(BaseModel):\n    \"Schema to pass labels for calendar. Can be used to put in different languages\"\n    days_of_week: conlist(str, max_length=7, min_length=7) = [\"Mo\", \"Tu\", \"We\", \"Th\", \"Fr\", \"Sa\", \"Su\"]\n    months: conlist(str, max_length=12, min_length=12) = [\n        \"Jan\", \"Feb\", \"Mar\", \"Apr\", \"May\", \"Jun\", \"Jul\", \"Aug\", \"Sep\", \"Oct\", \"Nov\", \"Dec\"\n    ]",
+        "detail": "calendar.schemas",
+        "documentation": {}
+    },
+    {
+        "label": "DialogCalendarCallback",
+        "kind": 6,
+        "importPath": "calendar.schemas",
+        "description": "calendar.schemas",
+        "peekOfCode": "class DialogCalendarCallback(CalendarCallback, prefix=\"dialog_calendar\"):\n    act: DialogCalAct\nclass CalendarLabels(BaseModel):\n    \"Schema to pass labels for calendar. Can be used to put in different languages\"\n    days_of_week: conlist(str, max_length=7, min_length=7) = [\"Mo\", \"Tu\", \"We\", \"Th\", \"Fr\", \"Sa\", \"Su\"]\n    months: conlist(str, max_length=12, min_length=12) = [\n        \"Jan\", \"Feb\", \"Mar\", \"Apr\", \"May\", \"Jun\", \"Jul\", \"Aug\", \"Sep\", \"Oct\", \"Nov\", \"Dec\"\n    ]\n    cancel_caption: str = Field(default='Cancel', description='Caprion for Cancel button')\n    today_caption: str = Field(default='Today', description='Caprion for Cancel button')",
+        "detail": "calendar.schemas",
+        "documentation": {}
+    },
+    {
+        "label": "CalendarLabels",
+        "kind": 6,
+        "importPath": "calendar.schemas",
+        "description": "calendar.schemas",
+        "peekOfCode": "class CalendarLabels(BaseModel):\n    \"Schema to pass labels for calendar. Can be used to put in different languages\"\n    days_of_week: conlist(str, max_length=7, min_length=7) = [\"Mo\", \"Tu\", \"We\", \"Th\", \"Fr\", \"Sa\", \"Su\"]\n    months: conlist(str, max_length=12, min_length=12) = [\n        \"Jan\", \"Feb\", \"Mar\", \"Apr\", \"May\", \"Jun\", \"Jul\", \"Aug\", \"Sep\", \"Oct\", \"Nov\", \"Dec\"\n    ]\n    cancel_caption: str = Field(default='Cancel', description='Caprion for Cancel button')\n    today_caption: str = Field(default='Today', description='Caprion for Cancel button')\nHIGHLIGHT_FORMAT = \"[{}]\"\ndef highlight(text):",
+        "detail": "calendar.schemas",
+        "documentation": {}
+    },
+    {
+        "label": "highlight",
+        "kind": 2,
+        "importPath": "calendar.schemas",
+        "description": "calendar.schemas",
+        "peekOfCode": "def highlight(text):\n    return HIGHLIGHT_FORMAT.format(text)\ndef superscript(text):\n    normal = \"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-=()\"\n    super_s = \"ᴬᴮᶜᴰᴱᶠᴳᴴᴵᴶᴷᴸᴹᴺᴼᴾQᴿˢᵀᵁⱽᵂˣʸᶻᵃᵇᶜᵈᵉᶠᵍʰᶦʲᵏˡᵐⁿᵒᵖ۹ʳˢᵗᵘᵛʷˣʸᶻ⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾\"\n    output = ''\n    for i in text:\n        output += (super_s[normal.index(i)] if i in normal else i)\n    return output\ndef subscript(text):",
+        "detail": "calendar.schemas",
+        "documentation": {}
+    },
+    {
+        "label": "superscript",
+        "kind": 2,
+        "importPath": "calendar.schemas",
+        "description": "calendar.schemas",
+        "peekOfCode": "def superscript(text):\n    normal = \"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-=()\"\n    super_s = \"ᴬᴮᶜᴰᴱᶠᴳᴴᴵᴶᴷᴸᴹᴺᴼᴾQᴿˢᵀᵁⱽᵂˣʸᶻᵃᵇᶜᵈᵉᶠᵍʰᶦʲᵏˡᵐⁿᵒᵖ۹ʳˢᵗᵘᵛʷˣʸᶻ⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾\"\n    output = ''\n    for i in text:\n        output += (super_s[normal.index(i)] if i in normal else i)\n    return output\ndef subscript(text):\n    normal = \"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-=()\"\n    sub_s = \"ₐ₈CDₑբGₕᵢⱼₖₗₘₙₒₚQᵣₛₜᵤᵥwₓᵧZₐ♭꜀ᑯₑբ₉ₕᵢⱼₖₗₘₙₒₚ૧ᵣₛₜᵤᵥwₓᵧ₂₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎\"",
+        "detail": "calendar.schemas",
+        "documentation": {}
+    },
+    {
+        "label": "subscript",
+        "kind": 2,
+        "importPath": "calendar.schemas",
+        "description": "calendar.schemas",
+        "peekOfCode": "def subscript(text):\n    normal = \"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-=()\"\n    sub_s = \"ₐ₈CDₑբGₕᵢⱼₖₗₘₙₒₚQᵣₛₜᵤᵥwₓᵧZₐ♭꜀ᑯₑբ₉ₕᵢⱼₖₗₘₙₒₚ૧ᵣₛₜᵤᵥwₓᵧ₂₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎\"\n    output = ''\n    for i in text:\n        output += (sub_s[normal.index(i)] if i in normal else i)\n    return output",
+        "detail": "calendar.schemas",
+        "documentation": {}
+    },
+    {
+        "label": "HIGHLIGHT_FORMAT",
+        "kind": 5,
+        "importPath": "calendar.schemas",
+        "description": "calendar.schemas",
+        "peekOfCode": "HIGHLIGHT_FORMAT = \"[{}]\"\ndef highlight(text):\n    return HIGHLIGHT_FORMAT.format(text)\ndef superscript(text):\n    normal = \"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-=()\"\n    super_s = \"ᴬᴮᶜᴰᴱᶠᴳᴴᴵᴶᴷᴸᴹᴺᴼᴾQᴿˢᵀᵁⱽᵂˣʸᶻᵃᵇᶜᵈᵉᶠᵍʰᶦʲᵏˡᵐⁿᵒᵖ۹ʳˢᵗᵘᵛʷˣʸᶻ⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾\"\n    output = ''\n    for i in text:\n        output += (super_s[normal.index(i)] if i in normal else i)\n    return output",
+        "detail": "calendar.schemas",
         "documentation": {}
     },
     {
@@ -484,7 +714,7 @@
         "kind": 5,
         "importPath": "handlers.user_private",
         "description": "handlers.user_private",
-        "peekOfCode": "user_router = Router()\nuser_router.message.filter(ChatFilter(['private']))\n@user_router.message(or_f(Command(\"start\"), (F.text.lower() == \"в начало ↩️\"), (F.text.lower() == \"старт\")))\nasync def start_cmd(message: types.Message):\n        await message.answer('Что Вас интересует?', reply_markup=reply.start_kb)\n#------------------------------------------------------------------------------------------------------\n@user_router.message(or_f(Command('current_work'), (F.text.lower() == \"текущая работа ⏱\")))\nasync def current_work_cmd(message: types.Message):\n    await message.answer('Твоя текущая работа:', reply_markup=reply.current_work_kb)\n#------------------------------------------------------------------------------------------------------",
+        "peekOfCode": "user_router = Router()\nuser_router.message.filter(ChatFilter(['private']))\n@user_router.message(or_f(Command(\"start\"), (F.text.lower() == \"в начало ↩️\"), (F.text.lower() == \"старт\")))\nasync def start_cmd(message: types.Message):\n        await message.answer('Что Вас интересует?', reply_markup=reply.start_kb)\n#------------------------------------------------------------------------------------------------------\n@user_router.message(or_f(Command('current_work'), (F.text.lower() == \"текущая работа ⏱\")))\nasync def current_work_cmd(message: types.Message):\n    await message.answer('Твоя текущая работа', reply_markup=reply.current_work_kb)\n# #------------------------------------------------------------------------------------------------------",
         "detail": "handlers.user_private",
         "documentation": {}
     },
@@ -529,7 +759,7 @@
         "kind": 5,
         "importPath": "kbrd.reply",
         "description": "kbrd.reply",
-        "peekOfCode": "send_work_kb = ReplyKeyboardMarkup(\n    keyboard=[\n        [\n            KeyboardButton(text='Загрузить 📥'),\n            KeyboardButton(text='В начало ↩️'),\n        ],\n    ],\n    resize_keyboard=True,\n    input_field_placeholder=\"Выберите нужный пункт:\"\n)",
+        "peekOfCode": "send_work_kb = ReplyKeyboardMarkup(\n    keyboard=[\n        [\n            KeyboardButton(text='В начало ↩️'),\n        ],\n    ],\n    resize_keyboard=True,\n    input_field_placeholder=\"Выберите нужный пункт:\"\n)\n#----------------------------------------------------------------------------------",
         "detail": "kbrd.reply",
         "documentation": {}
     },
