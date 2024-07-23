@@ -12,6 +12,7 @@ from filters.chat_types import ChatFilter, IsAdmin
 from kbrd import reply
 from kbrd.calendar import SimpleCalendar
 from kbrd.reply import admin_kb, del_kb
+from googlesheets.table import GoogleTable
 
 #----------------------------------------------------------------------------------
 admin_router = Router()
@@ -28,30 +29,41 @@ async def project_klnd(message: types.Message):
     await message.answer("ОК, вот список:")
 
 #----------------------------------------------------------------------------------
+@admin_router.message(F.text == "Проверка работ")
+async def project_klnd(message: types.Message):
+    user_id = str(message.from_user.id)
+    await message.answer("Работа на проверку: ")
+
+#----------------------------------------------------------------------------------
 @admin_router.message(F.text == "Распределение задач")
 async def task_distrib(message: types.Message):
     await message.answer("Кому хотите передать задачу?")
 
 #----------------------------------------------------------------------------------
-@admin_router.message(F.text == "Проектный календарь")
-async def worker_list(message: types.Message):
-        await message.answer(
-        "Выберите дату: ",
-        reply_markup=await SimpleCalendar(locale='Russian_Russia').start_calendar()
-    )
+@admin_router.message(F.text == "Таблица работ")
+async def task_distrib(message: types.Message):
+    await message.answer("Ссылка на таблицу: \nhttps://docs.google.com/spreadsheets/d/1NQrStv45dgDhxkvkBrYvJfr2wfW3xBVDMqPZO44xQ3g", reply_markup=admin_kb)
 
-@admin_router.callback_query(SimpleCalendarCallback.filter())
-async def process_simple_calendar(callback_query: CallbackQuery, callback_data: CallbackData):
-    calendar = SimpleCalendar(
-        locale='Russian_Russia', show_alerts=True
-    )
-    calendar.set_dates_range(datetime(2024, 1, 1), datetime(2050, 12, 31))
-    selected, date = await calendar.process_selection(callback_query, callback_data)
-    if selected:
-        await callback_query.message.answer(
-            f'Выбрана дата: {date.strftime("%d/%m/%Y")}',
-            reply_markup=reply.timetable_kb
-        )
+#----------------------------------------------------------------------------------
+# @admin_router.message(F.text == "Проектный календарь")
+# async def worker_list(message: types.Message):
+#         await message.answer(
+#         "Выберите дату: ",
+#         reply_markup=await SimpleCalendar(locale='Russian_Russia').start_calendar()
+#     )
+
+# @admin_router.callback_query(SimpleCalendarCallback.filter())
+# async def process_simple_calendar(callback_query: CallbackQuery, callback_data: CallbackData):
+#     calendar = SimpleCalendar(
+#         locale='Russian_Russia', show_alerts=True
+#     )
+#     calendar.set_dates_range(datetime(2024, 1, 1), datetime(2050, 12, 31))
+#     selected, date = await calendar.process_selection(callback_query, callback_data)
+#     if selected:
+#         await callback_query.message.answer(
+#             f'Выбрана дата: {date.strftime("%d/%m/%Y")}',
+#             reply_markup=reply.timetable_kb
+#         )
 
 #----------------------------- Код ниже для машины состояний (FSM) -----------------------------
 
@@ -143,9 +155,9 @@ async def set_file_name2(message: types.Message, state: FSMContext):
     await message.answer("Ввели данные неверно. Необходимо ввести название файла")
 
 # #----------------------------------------------------------------------------------
-@admin_router.message(CreateTask.file, F.document)
+@admin_router.message(CreateTask.file, F.text)
 async def set_file(message: types.Message, state: FSMContext):
-    await state.update_data(file=message.document)
+    await state.update_data(file=message.text)
     await message.answer("Введите имена через запятую: ")
     await state.set_state(CreateTask.name)
 

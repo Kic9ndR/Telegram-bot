@@ -29,10 +29,11 @@ admin_kb = ReplyKeyboardMarkup(
         [
             KeyboardButton(text='Создание задачи'),
             KeyboardButton(text='Список сотрудников'),
+            KeyboardButton(text='Проверка работ'),
         ],
         [
             KeyboardButton(text='Распределение задач'),
-            KeyboardButton(text='Проектный календарь'),
+            KeyboardButton(text='Таблица работ'),
         ],
     ],
     resize_keyboard=True,

@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "hummystudiobot",
+  "private_key_id": "30c17934d09d12f719948ee9a9833780aaece18f",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDHPvlClRkyANes\nhWNN67+F8DTRB2wS89d4ASviGWRQK9478wwSkYoWitv1G8cPxSgN1OxMcfmmUByf\npgyXkWxb/iuyAyFfqPU4dw5wdpfe5iCfXOuP+27Hr31iplZM8an2QF990Wx55E6N\n8HYmJwWVOMNFlw5XDGf6carl4wV6N11f+SGD0yhqP5B5Kd+5HSWOQN5CvVZ94gtr\nszO/mum7AgfFIQO5AwEDh8vtqzijFW/KmnDuK5kRbofe+qdE/DDSS2s29n3qb10f\nGNJ7/pBkRGzwAuyFEo3lGhad4s27hdtks3El3gQCceTPgWI3SELbxhvB7Q/EpLN1\n7z4dbg2RAgMBAAECggEAHOZSSD6RGiggyvoeq8QzPPhY6NgfQbvS99SPqsANGqB/\nn7QX/wTTgdk1S0mdUiPCNLNlbOHRQ2F2WA/BNCYt5e/+zYICZWTVNhH1awmV615M\nwrYQcuDA3Oo5kRqtr4O+p88G1XHlaTlczYi10msxi5yL8lGVN7oUcNvrh7mp5zkp\nUVTrJWyGi5PP01nKCr+wlwG3uAYFPp5Vg8NFSRBNepKwtK2J4dHfIA2HJp4/NPtO\n3IL/7uPwTSEYMa6rf0BTbWo3nTP8995p4kAgB7lx38zh+LSPIou4ZLSHkidu2YUU\nXhfBlET404wFdZEzaxVK2NjHZdhS9I7pNOW2Ic23CwKBgQDt2cDNq23PFoIa6tnY\nUJuXZaznDxwNZ3U9PeQ4rRDqlBHvao3bYDtVz86EYpDPC1Sm7rzA6MF6tODKyYar\naLV9hqGvo1Dn3UaqgzCj5j0OF9yBq1sSWa/l4b1aRDeVWyjAc+SZ1IX1B8kOQEXL\n5CMdTm62+EQvUKGWwvKQ1emF0wKBgQDWcxsyq7aIYs6nFPIbJujoHsIGVbWDJrYp\nUJPYBZwhBDgvmmhk8epRFsqandc/SGRZR8EuysIVP4QccWKXNWZJEcMnlug9ZPvN\nOu7rq5/Y5sMWBeNXnW2JuhgxnsA0J28Ow2Y1zcth+r1sDf3rpJruOTTBClrizuze\nfDGnTOGMiwKBgQCTpxYVl1I3uJVT+G775i5wseHAHpUfjRYuynke5fEWbo0jv1YI\n1ZiAENz3OekDXtlSN+pdJyDU9+yEds5vIjVok2dUDWJwTeFMgNx1IrzMPuvYY3PJ\n1HtpjdVqb+bBhTGrJ0bGaDQwhIC/pA6wIBPcYZBBbaWGadumJ6dFWkX5mQKBgQC/\nRc+edFXMdATKNf5zhVL7pmN8bvoEzoRveTVE2kwVjsPmgZxXXQaX6PIw0lPoV9NZ\nZozCBYrylMJq9B7xq2leBv+/0fO2vtlwhf4QKfXa6ohanknWHc5Tp65oo6XfXsTJ\nsDL8DmA3NgO52wj+IsUlcdTB0VCbN+FB2BgZlpMeXQKBgDRz1V81X6WJNSUIVFi+\nkQRbU2tM2QbHZGFddRWcXrTELU+AqZwiQbOCZHSeSGT+ffET3FcIyZOtJ7rRYr6O\nu1v6JYycQVZv9pwckFA0RtI5yMntmMhpfLeJbcvE5ErIo3fOcbCPlOyo2Ft6iErT\nT5tWrmjrGaI+c+HDmmE0fwfo\n-----END PRIVATE KEY-----\n",
+  "client_email": "hummystudiobot@hummystudiobot.iam.gserviceaccount.com",
+  "client_id": "107969833263804061448",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/hummystudiobot%40hummystudiobot.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
