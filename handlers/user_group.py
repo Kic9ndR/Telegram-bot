@@ -2,6 +2,7 @@ from aiogram import F, Bot, types, Router
 from aiogram.filters import Command
 
 from filters.chat_types import ChatFilter
+from common.bot_cmds_list import admin
 
 
 user_group = Router()
@@ -24,4 +25,7 @@ async def get_admins(message: types.Message, bot: Bot):
     bot.my_admins_list = admins_list
     if message.from_user.id in admins_list:
         await message.delete()
+        await bot.set_my_commands(
+            commands=admin, scope=types.BotCommandScopeAllPrivateChats()
+    )
     # print(admins_list)

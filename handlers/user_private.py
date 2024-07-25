@@ -7,6 +7,8 @@ from aiogram.utils.markdown import hbold
 from filters.chat_types import ChatFilter
 
 from common.schemas import SimpleCalendarCallback
+from handlers import admin_private
+from handlers.user_group import get_admins
 from kbrd import reply
 from kbrd.calendar import SimpleCalendar
 
@@ -21,6 +23,7 @@ user_router.message.filter(ChatFilter(["private"]))
     )
 )
 async def start_cmd(message: types.Message):
+    user_id = str(message.from_user.id)
     await message.answer("Что Вас интересует?", reply_markup=reply.start_kb)
 
 

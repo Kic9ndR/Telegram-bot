@@ -10,7 +10,7 @@ load_dotenv(find_dotenv())
 from handlers.user_private import user_router
 from handlers.user_group import user_group
 from handlers.admin_private import admin_router
-from common.bot_cmds_list import private
+from common.bot_cmds_list import private, admin
 
 ALLOWED_UPDATES = ["message, edited_message"]
 
@@ -23,7 +23,6 @@ db.include_router(admin_router)
 
 # ----------------------------------------------------------------------------------
 # ----------------------------------------------------------------------------------
-
 
 async def main():
     await bot.delete_webhook(drop_pending_updates=True)

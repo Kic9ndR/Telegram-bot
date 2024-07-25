@@ -7,31 +7,34 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters.callback_data import CallbackData
 
-from common.schemas import SimpleCalendarCallback
+# from common.schemas import SimpleCalendarCallback
+# from kbrd.calendar import SimpleCalendar
 from filters.chat_types import ChatFilter, IsAdmin
 from kbrd import reply
-from kbrd.calendar import SimpleCalendar
 from kbrd.reply import admin_kb, del_kb
 from googlesheets.table import GoogleTable
+
 
 #----------------------------------------------------------------------------------
 admin_router = Router()
 admin_router.message.filter(ChatFilter(["private"]), IsAdmin())
 
-#----------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------- 
 @admin_router.message(Command("admin"))
 async def add_product(message: types.Message):
     await message.answer("Что хотите сделать?", reply_markup=admin_kb)
 
+
 #----------------------------------------------------------------------------------
 @admin_router.message(F.text == "Список сотрудников")
 async def project_klnd(message: types.Message):
-    await message.answer("ОК, вот список:")
+    google_table = GoogleTable()
+    second_column = google_table.get_second_column()
+    await message.answer('\n'.join(second_column))
 
 #----------------------------------------------------------------------------------
 @admin_router.message(F.text == "Проверка работ")
 async def project_klnd(message: types.Message):
-    user_id = str(message.from_user.id)
     await message.answer("Работа на проверку: ")
 
 #----------------------------------------------------------------------------------
@@ -42,7 +45,10 @@ async def task_distrib(message: types.Message):
 #----------------------------------------------------------------------------------
 @admin_router.message(F.text == "Таблица работ")
 async def task_distrib(message: types.Message):
-    await message.answer("Ссылка на таблицу: \nhttps://docs.google.com/spreadsheets/d/1NQrStv45dgDhxkvkBrYvJfr2wfW3xBVDMqPZO44xQ3g", reply_markup=admin_kb)
+    await message.answer(
+        "Ссылка на таблицу: \nhttps://docs.google.com/spreadsheets/d/1NQrStv45dgDhxkvkBrYvJfr2wfW3xBVDMqPZO44xQ3g", 
+        reply_markup=admin_kb
+                         )
 
 #----------------------------------------------------------------------------------
 # @admin_router.message(F.text == "Проектный календарь")
