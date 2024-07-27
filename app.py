@@ -7,10 +7,16 @@ from dotenv import load_dotenv, find_dotenv
 
 load_dotenv(find_dotenv())
 
+from middleware.db import DateBaseSession
+from database.engine import create_db, drop_db, session_maker
+
 from handlers.user_private import user_router
 from handlers.user_group import user_group
 from handlers.admin_private import admin_router
-from common.bot_cmds_list import private, admin
+
+from common.bot_cmds_list import private
+
+# ----------------------------------------------------------------------------------
 
 ALLOWED_UPDATES = ["message, edited_message"]
 
@@ -24,7 +30,24 @@ db.include_router(admin_router)
 # ----------------------------------------------------------------------------------
 # ----------------------------------------------------------------------------------
 
+async def on_startup(bot):
+    run_param = False
+    if run_param:
+        await drop_db()
+    
+    await create_db()
+
+async def on_shutdown(bot):
+    print("Бот упал :(")
+
+
 async def main():
+    db.startup.register(on_startup)
+    db.shutdown.register(on_shutdown)
+
+    db.update.middleware(DateBaseSession(session_pool = session_maker))
+
+    await create_db()
     await bot.delete_webhook(drop_pending_updates=True)
     await bot.set_my_commands(
         commands=private, scope=types.BotCommandScopeAllPrivateChats()
