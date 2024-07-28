@@ -6,6 +6,7 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters.callback_data import CallbackData
+from sqlalchemy.ext.asyncio import AsyncSession
 
 # from common.schemas import SimpleCalendarCallback
 # from kbrd.calendar import SimpleCalendar
@@ -27,7 +28,7 @@ async def add_product(message: types.Message):
 
 #----------------------------------------------------------------------------------
 @admin_router.message(F.text == "Список сотрудников")
-async def project_klnd(message: types.Message):
+async def project_klnd(message: types.Message, session: AsyncSession):
     google_table = GoogleTable()
     second_column = google_table.get_second_column()
     await message.answer('\n'.join(second_column))
@@ -78,6 +79,7 @@ class CreateTask(StatesGroup):
     deadline = State()
     file_name = State()
     file = State()
+    role = State()
     name = State()
     image = State()
 
@@ -86,17 +88,18 @@ class CreateTask(StatesGroup):
         'CreateTask:deadline': 'Введите срок выполнения повторно: ',
         'CreateTask:file_name': 'Введите названия файла повторно: ',
         'CreateTask:file': 'Загрузите файл повторно: ', 
+        'CreateTask:role': 'Введите роль повторно: ', 
         'CreateTask:name': 'Введите имена через запятую: ',
         'CreateTask:image': 'Загрузите изображение повторно: ',
     }
 
-#----------------------------------------------------------------------------------
+#--------------------------------------------- Создание задачи ---------------------------------------------
 @admin_router.message(StateFilter(None), F.text == "Создание задачи")
 async def create_task(message: types.Message, state: FSMContext):
     await message.answer("Введите название улицы: ", reply_markup=reply.admin_nav)
     await state.set_state(CreateTask.street)
 
-#----------------------------------------------------------------------------------
+#--------------------------------------------- Команда Отмены ---------------------------------------------
 @admin_router.message(StateFilter('*'), Command("отмена"))
 @admin_router.message(StateFilter('*'), F.text.casefold() == "отмена")
 async def cancel_handler(message: types.Message, state: FSMContext) -> None:
@@ -108,7 +111,7 @@ async def cancel_handler(message: types.Message, state: FSMContext) -> None:
     await state.clear()
     await message.answer("Действия отменены", reply_markup=admin_kb)
 
-#----------------------------------------------------------------------------------
+#--------------------------------------------- Команда назад ---------------------------------------------
 @admin_router.message(StateFilter('*'), Command("назад"))
 @admin_router.message(StateFilter('*'), F.text.casefold() == "назад")
 async def back_step_handler(message: types.Message, state: FSMContext) -> None:
@@ -127,7 +130,7 @@ async def back_step_handler(message: types.Message, state: FSMContext) -> None:
             return
         previous = step
 
-#----------------------------------------------------------------------------------
+#--------------------------------------------- Ввод улицы ---------------------------------------------
 @admin_router.message(CreateTask.street, F.text)
 async def set_street(message: types.Message, state: FSMContext):
     await state.update_data(street=message.text)
@@ -138,7 +141,7 @@ async def set_street(message: types.Message, state: FSMContext):
 async def set_street2(message: types.Message, state: FSMContext):
     await message.answer("Ввели данные неверно. Необходимо написать текст ")
 
-#----------------------------------------------------------------------------------
+#--------------------------------------------- Ввод дедлайна ---------------------------------------------
 @admin_router.message(CreateTask.deadline, F.text)
 async def set_deadline(message: types.Message, state: FSMContext):
     await state.update_data(deadline=message.text)
@@ -149,7 +152,7 @@ async def set_deadline(message: types.Message, state: FSMContext):
 async def set_deadline2(message: types.Message, state: FSMContext):
     await message.answer("Ввели данные неверно. Необходимо написать число ")
 
-#----------------------------------------------------------------------------------
+#--------------------------------------------- Ввод названия файла ---------------------------------------------
 @admin_router.message(CreateTask.file_name, F.text)
 async def set_file_name(message: types.Message, state: FSMContext):
     await state.update_data(file_name=message.text)
@@ -160,29 +163,55 @@ async def set_file_name(message: types.Message, state: FSMContext):
 async def set_file_name2(message: types.Message, state: FSMContext):
     await message.answer("Ввели данные неверно. Необходимо ввести название файла")
 
-# #----------------------------------------------------------------------------------
+#--------------------------------------------- Ввод файла ---------------------------------------------
 @admin_router.message(CreateTask.file, F.text)
 async def set_file(message: types.Message, state: FSMContext):
     await state.update_data(file=message.text)
-    await message.answer("Введите имена через запятую: ")
-    await state.set_state(CreateTask.name)
+    await message.answer("Введите роль исполнителя: ")
+    await state.set_state(CreateTask.role)
 
 @admin_router.message(CreateTask.file)
 async def set_file2(message: types.Message, state: FSMContext):
     await message.answer("Ввели данные неверно. Необходимо загрузить файл ")
 
-#----------------------------------------------------------------------------------
+
+
+
+#--------------------------------------------- Ввод роли ---------------------------------------------
+
+@admin_router.message(CreateTask.role, F.text.lower())
+async def set_role(message: types.Message, state: FSMContext):
+    role_text = message.text
+    await state.update_data(role=message.text)
+    await message.answer("Введите исполнителя: ")
+    await state.set_state(CreateTask.name)
+    await add_names(message, state, role_text)
+#--------------------------------------------- Ввод исполнителей ---------------------------------------------
+
 @admin_router.message(CreateTask.name, F.text)
-async def add_names(message: types.Message, state: FSMContext):
+async def add_names(message: types.Message, state: FSMContext, role_text: str):
     await state.update_data(name=message.text)
-    await message.answer("Загрузите изображение: ")
-    await state.set_state(CreateTask.image)
+    if role_text == 'final':
+        await message.answer("Загрузите изображение: ")
+        await state.set_state(CreateTask.image)
+    else:
+        current_state = await state.get_state()
+        previous = None
+        for step in CreateTask.__all_states__:
+            if step.state == current_state:
+                await state.set_state(previous)
+                await message.answer(f"\n{CreateTask.texts[previous.state]}")
+                return
+            previous = step
 
-@admin_router.message(CreateTask.name)
-async def add_names2(message: types.Message, state: FSMContext):
-    await message.answer("Ввели данные неверно. Добавьте имена через запятую ")
 
-#----------------------------------------------------------------------------------
+
+
+
+
+
+
+#--------------------------------------------- Загрузка фото ---------------------------------------------
 @admin_router.message(CreateTask.image, F.photo)
 async def add_image(message: types.Message, state: FSMContext):
     await state.update_data(image=message.photo[-1].file_id)

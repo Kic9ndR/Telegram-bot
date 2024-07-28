@@ -1,5 +1,5 @@
 from aiogram.types import (ReplyKeyboardMarkup, ReplyKeyboardRemove,
-                            KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup)
+                            KeyboardButton)
 
 
 del_kb = ReplyKeyboardRemove()

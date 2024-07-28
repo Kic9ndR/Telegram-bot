@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime
 from aiogram import types, Router, F
 from aiogram.filters import Command, StateFilter, or_f
@@ -23,7 +24,6 @@ user_router.message.filter(ChatFilter(["private"]))
     )
 )
 async def start_cmd(message: types.Message):
-    user_id = str(message.from_user.id)
     await message.answer("Что Вас интересует?", reply_markup=reply.start_kb)
 
 
