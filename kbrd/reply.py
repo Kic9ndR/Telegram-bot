@@ -28,12 +28,12 @@ admin_kb = ReplyKeyboardMarkup(
     keyboard=[
         [
             KeyboardButton(text='Создание задачи'),
-            KeyboardButton(text='Список сотрудников'),
-            KeyboardButton(text='Проверка работ'),
+            KeyboardButton(text='Список работ'),
+
         ],
         [
-            KeyboardButton(text='Распределение задач'),
             KeyboardButton(text='Таблица работ'),
+            KeyboardButton(text='Список сотрудников'),
         ],
     ],
     resize_keyboard=True,

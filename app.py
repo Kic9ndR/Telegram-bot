@@ -18,7 +18,7 @@ from common.bot_cmds_list import private
 
 # ----------------------------------------------------------------------------------
 
-ALLOWED_UPDATES = ["message, edited_message"]
+# ALLOWED_UPDATES = ["message, edited_message"]
 
 bot = Bot(token=os.getenv("TOKEN"))
 db = Dispatcher()
@@ -52,7 +52,7 @@ async def main():
     await bot.set_my_commands(
         commands=private, scope=types.BotCommandScopeAllPrivateChats()
     )
-    await db.start_polling(bot, allowed_updates=ALLOWED_UPDATES)
+    await db.start_polling(bot, allowed_updates=db.resolve_used_update_types())
 
 
 asyncio.run(main())
