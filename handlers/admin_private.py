@@ -1,6 +1,6 @@
 from datetime import datetime
 from turtle import title
-from aiogram import F, Router, types
+from aiogram import F, Bot, Router, types
 from aiogram.filters import Command, StateFilter, or_f
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
@@ -84,7 +84,7 @@ async def process_of_creation(message: types.Message, session: AsyncSession):
     for title in await orm_query.orm_get_all_unready(session):
         await message.answer_photo(
             title.image,
-            caption=f'{title.title}\nСрок выполнения: {title.deadline}\nСсылка на файл: {title.file}\nСписок исполнителей: {title.worker_name}',
+            caption=f'{title.title}\nСрок выполнения: {title.deadline}\nСсылка на файл: {title.file}\nСписок исполнителей{title.worker_name}',
             reply_markup=get_callback_btns(btns={
                 'Назначить': f'appoint_{title.title}',
                 'Изменить': f'change_{title.title}',
@@ -92,6 +92,28 @@ async def process_of_creation(message: types.Message, session: AsyncSession):
             })
         )
 
+
+@admin_router.callback_query(StateFilter(None), F.data.startswith('send_'))
+async def send_work(callback: types.CallbackQuery, state: FSMContext, session: AsyncSession, bot: Bot):
+    title_id = callback.data.split('_')[-1]
+    work = await orm_query.orm_get_work(session, title_id)
+    await orm_query.orm_delete_un_work(session, title_id)
+
+    await orm_query.orm_add_work(
+        session, 
+        title = work.title,
+        deadline = work.deadline,
+        file_name = work.file_name,
+        file = work.file,
+        worker_name = work.worker_name,
+        image = work.image,
+        )
+    
+    await bot.send_message(chat_id='-1002192469164', text=
+                           f'💰 - {work.title}\n🗓 - {work.deadline}\n📂 - {work.file_name}\n👉 {work.file}\n🫡 - {...}')
+
+    await callback.answer()
+    await callback.message.answer('Работа отправлена!')
 
 
 @admin_router.callback_query(StateFilter(None), F.data.startswith('change_'))
@@ -233,16 +255,16 @@ async def add_image(message: types.Message, state: FSMContext, session: AsyncSes
             reply_markup=admin_kb,
         )
 
-    for title in await orm_query.orm_get_all_unready(session):
-        await message.answer_photo(
-            title.image,
-            caption=f'{title.title}\nСрок выполнения: {title.deadline}\nСсылка на файл: {title.file}\nСписок исполнителей: {title.worker_name}',
-            reply_markup=get_callback_btns(btns={
-                'Назначить': f'appoint_{title.title}',
-                'Изменить': f'change_{title.title}',
-                'Отправить в работу': f'send_{title.title}',
-            })
-        )
+    # for title in await orm_query.orm_get_all_unready(session):
+    #     await message.answer_photo(
+    #         title.image,
+    #         caption=f'{title.title}\nСрок выполнения: {title.deadline}\nСсылка на файл: {title.file}\nСписок исполнителей: {title.worker_name}',
+    #         reply_markup=get_callback_btns(btns={
+    #             'Назначить': f'appoint_{title.title}',
+    #             'Изменить': f'change_{title.title}',
+    #             'Отправить в работу': f'send_{title.title}',
+    #         })
+    #     )
 
     await state.clear()
     CreateTask.title_for_change = None
@@ -274,13 +296,16 @@ async def add_work_id(callback: types.CallbackQuery, state: FSMContext):
     await callback.message.answer('Введите задачу:', reply_markup=reply.admin_nav)
 
 
+
 ################################################ Выбор задачи ################################################
 
 @admin_router.message(ChoiseWorker.task, F.text)
 async def add_task(message: types.Message, state: FSMContext, session: AsyncSession):
+    await message.delete()
     await state.update_data(task=message.text)
     await state.set_state(ChoiseWorker.name)
     await message.answer('Выберите сотрудника:', reply_markup=await choise_worker_btns(session))
+    await message.delete()
 
 
 ################################################ Распределение работы ################################################
@@ -290,7 +315,7 @@ async def add_name(callback: types.CallbackQuery, state: FSMContext, session: As
     await state.update_data(name=callback.data)
     data = await state.get_data()
     title_id = data['work_id']
-    task_and_name = str(f"{data['task']} -- {data['name']}")
+    task_and_name = str(f"{data['task']} - {data['name']}")
     try:
         await orm_query.orm_appoint_worker(session, title_id, task_and_name)
         await callback.answer('Выполнено')
@@ -300,6 +325,9 @@ async def add_name(callback: types.CallbackQuery, state: FSMContext, session: As
         await callback.answer(f'Ошибка: {e}')
         await callback.message.answer(f'Ошибка: {e}', reply_markup=reply.admin_kb)
         await state.clear()
+    
+    await callback.message.delete()
+    
 
 
 @admin_router.message(ChoiseWorker.name)

@@ -88,8 +88,44 @@ async def orm_get_user_info(session: AsyncSession):
 
 ############################################## Создание работы ##############################################
 
+async def orm_add_work(
+        session: AsyncSession, 
+        title: str,
+        deadline: int,
+        file_name: str,
+        file: str,
+        worker_name: str,
+        image: str,
+    ):
+
+    query = select(Work).where(Work.title == title)
+    result = await session.execute(query)
+    if result.first() is None:
+        session.add(
+            Work(
+                    title = title,
+                    deadline = deadline,
+                    file_name = file_name,
+                    file = file,
+                    worker_name = worker_name,
+                    image = image,
+                )
+        )
+        await session.commit()
+
+
+############################################## Удаление незаконченной работы ##############################################
+
+async def orm_delete_un_work(session: AsyncSession, title: str):
+    query = delete(UnreadyWorks).where(UnreadyWorks.title == title)
+    await session.execute(query)
+    await session.commit()
+
+
+############################################## Отправка работы ##############################################
+
 async def orm_add_task(session: AsyncSession, data: dict):
-    obj = UnreadyWorks(
+    obj = Work(
         title = data['title'],
         deadline = data['deadline'],
         file_name = data['file_name'],
@@ -108,7 +144,7 @@ async def orm_appoint_worker(session: AsyncSession, title_id: str, new_worker: s
     query = (
         update(UnreadyWorks)
         .where(UnreadyWorks.title == title_id)
-        ).values(worker_name=UnreadyWorks.worker_name + ', ' + new_worker)
+        ).values(worker_name=UnreadyWorks.worker_name + ':\n' + new_worker)
     
     await session.execute(query)
     await session.commit()
