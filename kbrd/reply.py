@@ -27,13 +27,16 @@ start_kb = ReplyKeyboardMarkup(
 admin_kb = ReplyKeyboardMarkup(
     keyboard=[
         [
-            KeyboardButton(text='Создание задачи'),
-            KeyboardButton(text='Список работ'),
+            KeyboardButton(text='Список сотрудников'),
+            KeyboardButton(text='Таблица работ'),
 
         ],
         [
-            KeyboardButton(text='Таблица работ'),
-            KeyboardButton(text='Список сотрудников'),
+            KeyboardButton(text='Список работ'),
+            KeyboardButton(text='В процессе создания'),
+        ],
+        [
+            KeyboardButton(text='Создание задачи'),
         ],
     ],
     resize_keyboard=True,

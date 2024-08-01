@@ -57,7 +57,9 @@ async def choise_worker_btns(session: AsyncSession):
     user_info = await orm_get_user_info(session)
     for worker in user_info:
         wk_kb.append([
-            InlineKeyboardButton(text=f'{worker.first_name} {worker.last_name}', callback_data=f'@{worker.username}')
+            InlineKeyboardButton(text=
+                f'{worker.first_name} {worker.last_name}', callback_data=f'{worker.first_name} @{worker.username}'
+                )
             ])
         
     return InlineKeyboardMarkup(row_width=3, inline_keyboard=wk_kb)

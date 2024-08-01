@@ -1,9 +1,10 @@
+from hmac import new
 import math
 from unittest.util import strclass
-from sqlalchemy import Column, String, select, update, delete
+from sqlalchemy import Column, String, insert, select, update, delete
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
-from database.models import AdminID, UserID, Work
+from database.models import AdminID, UnreadyWorks, UserID, Work
 
 
 
@@ -88,7 +89,7 @@ async def orm_get_user_info(session: AsyncSession):
 ############################################## Создание работы ##############################################
 
 async def orm_add_task(session: AsyncSession, data: dict):
-    obj = Work(
+    obj = UnreadyWorks(
         title = data['title'],
         deadline = data['deadline'],
         file_name = data['file_name'],
@@ -100,21 +101,54 @@ async def orm_add_task(session: AsyncSession, data: dict):
     session.add(obj)
     await session.commit()
 
-############################################## Изменение работы ##############################################
+
+############################################## Выбор исполнителя ##############################################
 
 async def orm_appoint_worker(session: AsyncSession, title_id: str, new_worker: str):
     query = (
-        update(Work)
-        .where(Work.title == title_id)
-        ).values(worker_name=new_worker)
- 
+        update(UnreadyWorks)
+        .where(UnreadyWorks.title == title_id)
+        ).values(worker_name=UnreadyWorks.worker_name + ', ' + new_worker)
+    
     await session.execute(query)
     await session.commit()
 
+
+async def orm_change(session: AsyncSession, title:str, data: dict):
+    query = (
+        update(UnreadyWorks)
+        .where(UnreadyWorks.title == title)
+        ).values(
+            title = data['title'],
+            deadline = data['deadline'],
+            file_name = data['file_name'],
+            file = data['file'],
+            image = data['image'],
+        )
+    
+    await session.execute(query)
+    await session.commit()
+
+
+
 ####################################### Получение информации о всех работах ##########################################
 
-async def orm_get_work(session: AsyncSession):
+async def orm_get_all_works(session: AsyncSession):
     query = select(Work)
+    result = await session.execute(query)
+    return result.scalars().all()
+
+
+#################################################### Не завершенные ##################################################
+
+async def orm_get_work(session: AsyncSession, title):
+    query = select(UnreadyWorks).where(UnreadyWorks.title == title)
+    result = await session.execute(query)
+    return result.scalar()
+
+
+async def orm_get_all_unready(session: AsyncSession):
+    query = select(UnreadyWorks)
     result = await session.execute(query)
     return result.scalars().all()
 
