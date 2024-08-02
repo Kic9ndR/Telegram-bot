@@ -59,20 +59,28 @@ async def current_work_cmd(message: types.Message, session: AsyncSession):
 
 # #----------------------------------------------------------------------------------------------------
 class SendWork(StatesGroup):
+    comment = State()
     work = State()
 
 @user_router.message(
     or_f(Command("send work"), (F.text.lower() == "отправить работу 📧"))
 )
 async def send_work_cmd(message: types.Message, state: FSMContext):
-    await message.answer("Вставь ссылку на работу", reply_markup=reply.send_work_kb)
+    await message.answer("Оставь комментарий к работе", reply_markup=reply.send_work_kb)
+    await state.set_state(SendWork.comment)
+
+@user_router.message(SendWork.comment, F.text)
+async def send_work_comment(message: types.Message, state: FSMContext):
+    await state.update_data(comment=message.text)
+    await message.answer("Вставь ссылку на работу")
     await state.set_state(SendWork.work)
 
 @user_router.message(SendWork.work, F.text)
 async def send_work(message: types.Message, bot:Bot, state: FSMContext, session: AsyncSession):
     await state.update_data(work=message.text)
+    data = await state.get_data()
     await bot.send_message(chat_id='-1002192469164', text=
-                           f'Работа на проверку от @{message.from_user.username}\n{message.text}')
+                           f'Работа на проверку от @{message.from_user.username}\nКоментарий к работе: {data["comment"]}\n\nСсылка на работу:\n{message.text}')
     await message.answer('Работа отправлена. Вы Молодец!', reply_markup=reply.start_kb)
     await state.clear()
     user = await orm_get_user(session, message.from_user.id)
@@ -86,7 +94,6 @@ async def send_work(message: types.Message, bot:Bot, state: FSMContext, session:
         username = user.username,
         title = work.title,
         )
-
 
 
 # ------------------------------------------------------------------------------------------------------

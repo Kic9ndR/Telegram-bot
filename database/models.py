@@ -14,7 +14,7 @@ class Work(Base):
     title: Mapped[str] = mapped_column(String(150), unique=True, primary_key=True)
     deadline: Mapped[int] = mapped_column(nullable=False)
     file_name: Mapped[str] = mapped_column(String(150))
-    file: Mapped[str] = mapped_column(String(150), unique=True, nullable=False)
+    file: Mapped[str] = mapped_column(String(150), nullable=False)
     worker_name: Mapped[str] = mapped_column(String(150), nullable=True)
     image: Mapped[str] = mapped_column(String(150), unique=True, nullable=False)
 
