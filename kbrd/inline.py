@@ -52,14 +52,16 @@ def get_inlineMix_btns(
 
 
 
-async def choise_worker_btns(session: AsyncSession):
-    wk_kb = []
+async def choise_worker_btns(
+        session: AsyncSession,
+        sizes = (2,),
+        ):
+    # wk_kb = []
     user_info = await orm_get_user_info(session)
+    keyboard = InlineKeyboardBuilder()
+
     for worker in user_info:
-        wk_kb.append([
-            InlineKeyboardButton(text=
-                f'{worker.first_name} {worker.last_name}', callback_data=f'{worker.first_name} @{worker.username}'
-                )
-            ])
-        
-    return InlineKeyboardMarkup(row_width=3, inline_keyboard=wk_kb)
+        keyboard.add(InlineKeyboardButton(text=
+                f'{worker.first_name} {worker.last_name}', callback_data=f"{worker.first_name} @{worker.username}"))
+
+    return keyboard.adjust(*sizes).as_markup()    

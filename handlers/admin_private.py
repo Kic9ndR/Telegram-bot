@@ -1,4 +1,5 @@
 from datetime import datetime
+from tkinter import PhotoImage
 from turtle import title
 from aiogram import F, Bot, Router, types
 from aiogram.filters import Command, StateFilter, or_f
@@ -49,12 +50,9 @@ async def add_product(message: types.Message):
 #----------------------------------------------------------------------------------
 @admin_router.message(F.text == "Список сотрудников")
 async def project_klnd(message: types.Message, session: AsyncSession):
-    user_list = await orm_query.orm_get_user_info(session)
-    for i in user_list:
-        await message.answer(f'{i.first_name} @{i.username}')
-    # google_table = GoogleTable()
-    # second_column = google_table.get_second_column()
-    # await message.answer('\n'.join(second_column))
+    google_table = GoogleTable()
+    second_column = google_table.get_second_column()
+    await message.answer('\n'.join(second_column))
 
 #----------------------------------------------------------------------------------
 @admin_router.message(F.text == "Таблица работ")
@@ -72,7 +70,7 @@ async def project_klnd(message: types.Message, session: AsyncSession):
             title.image,
             caption=f'{title.title}\nСрок выполнения: {title.deadline}\nСсылка на файл: {title.file}',
             reply_markup=get_callback_btns(btns={
-                        'Назначить': f'appoint_{title.title}',
+                        'Удалить': f'delete_{title.title}',
                         'Изменить': f'change_{title.title}'
                         }),
                 )
@@ -84,7 +82,7 @@ async def process_of_creation(message: types.Message, session: AsyncSession):
     for title in await orm_query.orm_get_all_unready(session):
         await message.answer_photo(
             title.image,
-            caption=f'{title.title}\nСрок выполнения: {title.deadline}\nСсылка на файл: {title.file}\nСписок исполнителей{title.worker_name}',
+            caption=f'{title.title}\nСрок выполнения: {title.deadline}\nСсылка на файл: {title.file}\nСписок исполнителей\n{title.worker_name}',
             reply_markup=get_callback_btns(btns={
                 'Назначить': f'appoint_{title.title}',
                 'Изменить': f'change_{title.title}',
@@ -109,8 +107,18 @@ async def send_work(callback: types.CallbackQuery, state: FSMContext, session: A
         image = work.image,
         )
     
-    await bot.send_message(chat_id='-1002192469164', text=
-                           f'💰 - {work.title}\n🗓 - {work.deadline}\n📂 - {work.file_name}\n👉 {work.file}\n🫡 - {...}')
+
+    for user_id in await orm_query.orm_get_user_info(session):
+        if user_id.username in work.worker_name:
+            await orm_query.orm_add_current_work(session, user_id.user_id, title_id) 
+            await bot.send_message(chat_id=user_id.user_id, text='Вам назначена новая работа')
+            await bot.send_photo(chat_id=user_id.user_id, photo=work.image, caption=
+                                f'💰 - {work.title}\n🗓 - {work.deadline}\n📂 - {work.file_name}\n👉 {work.file}')
+
+
+    await bot.send_photo(chat_id='-1002192469164', photo=work.image, caption=
+                    f"💰 - {work.title}\n🗓 - {work.deadline}\n📂 - {work.file_name}\n👉 {work.file}\n{work.worker_name}")
+
 
     await callback.answer()
     await callback.message.answer('Работа отправлена!')
@@ -236,7 +244,7 @@ async def set_file2(message: types.Message, state: FSMContext):
 
 ################################################ Загрузка фото ################################################
 @admin_router.message(CreateTask.image, or_f(F.photo, F.text == '.'))
-async def add_image(message: types.Message, state: FSMContext, session: AsyncSession):
+async def add_image(callback: CallbackQuery, message: types.Message, state: FSMContext, session: AsyncSession):
     if message.text == '.':
         await state.update_data(image=CreateTask.title_for_change.image)
     else:
@@ -255,16 +263,15 @@ async def add_image(message: types.Message, state: FSMContext, session: AsyncSes
             reply_markup=admin_kb,
         )
 
-    # for title in await orm_query.orm_get_all_unready(session):
-    #     await message.answer_photo(
-    #         title.image,
-    #         caption=f'{title.title}\nСрок выполнения: {title.deadline}\nСсылка на файл: {title.file}\nСписок исполнителей: {title.worker_name}',
-    #         reply_markup=get_callback_btns(btns={
-    #             'Назначить': f'appoint_{title.title}',
-    #             'Изменить': f'change_{title.title}',
-    #             'Отправить в работу': f'send_{title.title}',
-    #         })
-    #     )
+    i = await orm_query.orm_get_work(session, title_id)
+    await callback.message.answer_photo(photo=i.image, caption=
+        f'{i.title}\nСрок выполнения: {i.deadline}\nСсылка на файл: {i.file}\nСписок исполнителей\n{i.worker_name}',
+        reply_markup=get_callback_btns(btns={
+                'Назначить': f'appoint_{title.title}',
+                'Изменить': f'change_{title.title}',
+                'Отправить в работу': f'send_{title.title}',
+            })
+        )
 
     await state.clear()
     CreateTask.title_for_change = None
@@ -294,32 +301,33 @@ async def add_work_id(callback: types.CallbackQuery, state: FSMContext):
     await state.set_state(ChoiseWorker.task)
     await callback.answer('Введите задачу:')
     await callback.message.answer('Введите задачу:', reply_markup=reply.admin_nav)
-
+    await callback.message.delete()
 
 
 ################################################ Выбор задачи ################################################
 
 @admin_router.message(ChoiseWorker.task, F.text)
 async def add_task(message: types.Message, state: FSMContext, session: AsyncSession):
-    await message.delete()
     await state.update_data(task=message.text)
     await state.set_state(ChoiseWorker.name)
     await message.answer('Выберите сотрудника:', reply_markup=await choise_worker_btns(session))
-    await message.delete()
 
 
 ################################################ Распределение работы ################################################
 
 @admin_router.callback_query(ChoiseWorker.name, F.data)
-async def add_name(callback: types.CallbackQuery, state: FSMContext, session: AsyncSession):
+async def add_name(callback: types.CallbackQuery, state: FSMContext, session: AsyncSession, bot: Bot):
     await state.update_data(name=callback.data)
     data = await state.get_data()
     title_id = data['work_id']
-    task_and_name = str(f"{data['task']} - {data['name']}")
+    task_and_name = str(f"🫡  {data['task']} - {data['name']}")
     try:
         await orm_query.orm_appoint_worker(session, title_id, task_and_name)
+
         await callback.answer('Выполнено')
         await callback.message.answer('Работа назначена', reply_markup=reply.admin_kb)
+
+
         await state.clear()
     except Exception as e:
         await callback.answer(f'Ошибка: {e}')
@@ -327,7 +335,16 @@ async def add_name(callback: types.CallbackQuery, state: FSMContext, session: As
         await state.clear()
     
     await callback.message.delete()
-    
+
+    i = await orm_query.orm_get_work(session, title_id)
+    await callback.message.answer_photo(photo=i.image, caption=
+        f'{i.title}\nСрок выполнения: {i.deadline}\nСсылка на файл: {i.file}\nСписок исполнителей\n{i.worker_name}',
+        reply_markup=get_callback_btns(btns={
+                'Назначить': f'appoint_{title.title}',
+                'Изменить': f'change_{title.title}',
+                'Отправить в работу': f'send_{title.title}',
+            })
+        )
 
 
 @admin_router.message(ChoiseWorker.name)

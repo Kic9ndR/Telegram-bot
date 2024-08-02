@@ -4,7 +4,7 @@ from unittest.util import strclass
 from sqlalchemy import Column, String, insert, select, update, delete
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
-from database.models import AdminID, UnreadyWorks, UserID, Work
+from database.models import AdminID, UnreadyWorks, UserID, Work, WorkCheck
 
 
 
@@ -66,24 +66,25 @@ async def orm_add_user(
 ############################################## Получение инфы пользователей ##############################################
 
 async def orm_get_user_info(session: AsyncSession):
-    # query = select(UserID).filter(UserID.first_name, UserID.last_name, UserID.username)
-    # result = await session.execute(query)
-    # return result.scalars()
-
     query = select(UserID)
     result = await session.execute(query)
     user = result.scalars().all()
     return user
-    # if user is None:
-    #     raise ValueError(f"User with id {user.user_id} not found")
-    # return {
-    #     "user_id": user.user_id,
-    #     "first_name": user.first_name,
-    #     "last_name": user.last_name,
-    #     "username": user.username,
-    #     "current_work": user.current_work,
-    # }
 
+async def orm_get_user(session: AsyncSession, user_id):
+    query = select(UserID).where(UserID.user_id == user_id)
+    result = await session.execute(query)
+    return result.scalar()
+
+
+async def orm_add_current_work(session: AsyncSession, user_id: int, title: str):
+    query = (
+        update(UserID).where(UserID.user_id == user_id)
+        .values(current_work=title)
+        )
+    
+    await session.execute(query)
+    await session.commit()
 
 
 ############################################## Создание работы ##############################################
@@ -114,6 +115,35 @@ async def orm_add_work(
         await session.commit()
 
 
+############################################## Создание базы для проверкии работ ##############################################
+
+async def orm_add_chech_work(
+        session,
+        user_id: int,
+        first_name: str,
+        last_name: str,
+        username: str,
+        title: str,
+    ):
+
+    query = select(WorkCheck).where(WorkCheck.title == title)
+    result = await session.execute(query)
+    if result.first() is None:
+        session.add(
+            WorkCheck(
+                    user_id = user_id,
+                    first_name = first_name,
+                    last_name = last_name,
+                    username = username,
+                    title = title,
+                )
+        )
+        await session.commit()
+
+
+# async def orm_get_chech_work(session: AsyncSession):
+    
+
 ############################################## Удаление незаконченной работы ##############################################
 
 async def orm_delete_un_work(session: AsyncSession, title: str):
@@ -125,7 +155,7 @@ async def orm_delete_un_work(session: AsyncSession, title: str):
 ############################################## Отправка работы ##############################################
 
 async def orm_add_task(session: AsyncSession, data: dict):
-    obj = Work(
+    obj = UnreadyWorks(
         title = data['title'],
         deadline = data['deadline'],
         file_name = data['file_name'],
@@ -144,7 +174,7 @@ async def orm_appoint_worker(session: AsyncSession, title_id: str, new_worker: s
     query = (
         update(UnreadyWorks)
         .where(UnreadyWorks.title == title_id)
-        ).values(worker_name=UnreadyWorks.worker_name + ':\n' + new_worker)
+        ).values(worker_name=UnreadyWorks.worker_name + '\n' + new_worker)
     
     await session.execute(query)
     await session.commit()
@@ -173,6 +203,11 @@ async def orm_get_all_works(session: AsyncSession):
     query = select(Work)
     result = await session.execute(query)
     return result.scalars().all()
+
+async def orm_get_ready_work(session: AsyncSession, title):
+    query = select(Work).where(Work.title == title)
+    result = await session.execute(query)
+    return result.scalar()
 
 
 #################################################### Не завершенные ##################################################

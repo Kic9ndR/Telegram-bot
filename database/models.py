@@ -8,26 +8,6 @@ class Base(DeclarativeBase):
 
 ###################################################################################################################
 ###################################################################################################################
-class AdminList(Base):
-    __tablename__ = 'admin list'
-
-    id: Mapped[str] = mapped_column(primary_key=True)
-    first_name: Mapped[str] = mapped_column(String(150), nullable=False)
-    last_name: Mapped[str] = mapped_column(String(150), nullable=False)
-
-
-###################################################################################################################
-class CurrentWork(Base):
-    __tablename__ = 'current work'
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(150), nullable=False)
-    work: Mapped[str] = mapped_column(String(150), nullable=False)
-    photo: Mapped[str] = mapped_column(String(150), nullable=False)
-    status: Mapped[str] = mapped_column(String(150), nullable=False)
-
-
-###################################################################################################################
 class Work(Base):
     __tablename__ = 'work'
 
@@ -46,8 +26,8 @@ class UnreadyWorks(Base):
     title: Mapped[str] = mapped_column(String(150), unique=True, primary_key=True)
     deadline: Mapped[int] = mapped_column(nullable=False)
     file_name: Mapped[str] = mapped_column(String(150))
-    file: Mapped[str] = mapped_column(String(150), unique=True, nullable=False)
-    worker_name: Mapped[str] = mapped_column(String(150), nullable=True)
+    file: Mapped[str] = mapped_column(String(150), nullable=False)
+    worker_name: Mapped[str] = mapped_column(nullable=True)
     image: Mapped[str] = mapped_column(String(150), unique=True, nullable=False)
 
 
@@ -70,3 +50,14 @@ class AdminID(Base):
     first_name: Mapped[str] = mapped_column(String(150), nullable=False)
     last_name: Mapped[str] = mapped_column(String(150), nullable=False)
     username: Mapped[str] = mapped_column(String(150), nullable=False)
+
+###################################################################################################################
+
+class WorkCheck(Base):
+    __tablename__ = 'work check'
+
+    user_id: Mapped[int] = mapped_column(primary_key=True)
+    first_name: Mapped[str] = mapped_column(String(150), nullable=False)
+    last_name: Mapped[str] = mapped_column(String(150), nullable=False)
+    username: Mapped[str] = mapped_column(String(150), nullable=False)
+    title: Mapped[str] = mapped_column(String(150), nullable=False)

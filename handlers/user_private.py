@@ -11,7 +11,7 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 
 
-from database.orm_query import orm_add_user, orm_get_user_info
+from database.orm_query import orm_add_chech_work, orm_add_user, orm_get_ready_work, orm_get_user, orm_get_user_info
 from common.schemas import SimpleCalendarCallback
 from handlers import admin_private
 from handlers.user_group import get_admins
@@ -48,8 +48,13 @@ async def start_cmd(message: types.Message, session: AsyncSession, state: FSMCon
 @user_router.message(
     or_f(Command("current_work"), (F.text.lower() == "текущая работа ⏱"))
 )
-async def current_work_cmd(message: types.Message):
-    await message.answer("Твоя текущая работа", reply_markup=reply.current_work_kb)
+async def current_work_cmd(message: types.Message, session: AsyncSession):
+    user = await orm_get_user(session, message.from_user.id)
+    work = await orm_get_ready_work(session, user.current_work)
+    task = work.worker_name.split("-")[0]
+
+    await message.answer_photo(photo=work.image, caption=
+                f'Работа - {work.title}\nСрок выполнения: {work.deadline}\nСсылка на файл: {work.file}\nТвоя задача: {task}')
 
 
 # #----------------------------------------------------------------------------------------------------
@@ -64,11 +69,25 @@ async def send_work_cmd(message: types.Message, state: FSMContext):
     await state.set_state(SendWork.work)
 
 @user_router.message(SendWork.work, F.text)
-async def send_work(message: types.Message, bot:Bot, state: FSMContext):
+async def send_work(message: types.Message, bot:Bot, state: FSMContext, session: AsyncSession):
     await state.update_data(work=message.text)
-    await bot.send_message(chat_id='-1002192469164', text=message.text)
+    await bot.send_message(chat_id='-1002192469164', text=
+                           f'Работа на проверку от @{message.from_user.username}\n{message.text}')
     await message.answer('Работа отправлена. Вы Молодец!', reply_markup=reply.start_kb)
     await state.clear()
+    user = await orm_get_user(session, message.from_user.id)
+    work = await orm_get_ready_work(session, user.current_work)
+
+    await orm_add_chech_work(
+        session, 
+        user_id = user.user_id,
+        first_name = user.first_name,
+        last_name = user.last_name,
+        username = user.username,
+        title = work.title,
+        )
+
+
 
 # ------------------------------------------------------------------------------------------------------
 @user_router.message(or_f(Command("archive"), (F.text.lower() == "архив работ 🗄️")))
