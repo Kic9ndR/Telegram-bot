@@ -9,9 +9,8 @@ from aiogram.types import Message, CallbackQuery
 from aiogram.filters.callback_data import CallbackData
 from sqlalchemy.ext.asyncio import AsyncSession
 
-# from common.schemas import SimpleCalendarCallback
-# from kbrd.calendar import SimpleCalendar
-from database import orm_query # import orm_add_task, orm_appoint_worker, orm_get_last_work, orm_get_user_info, orm_get_work
+
+from database import orm_query
 from filters.chat_types import ChatFilter, IsAdmin
 from kbrd import reply
 from kbrd.inline import choise_worker_btns, get_callback_btns
@@ -43,7 +42,7 @@ class CreateTask(StatesGroup):
 
 #---------------------------------------------------------------------------------- 
 @admin_router.message(Command("admin"))
-async def add_product(message: types.Message):
+async def admin(message: types.Message):
     await message.answer("Что хотите сделать?", reply_markup=admin_kb)
 
 
@@ -137,7 +136,10 @@ async def change_work(callback: types.CallbackQuery, state: FSMContext, session:
     await state.set_state(CreateTask.title)
 
 
-################################# Код ниже для машины состояний (FSM) #################################
+################################# Код ниже для машины состояний (FSM) ##########################################
+
+
+################################################################################################################
 
 @admin_router.message(StateFilter(None), F.text == "Создание задачи")
 async def create_task(message: types.Message, state: FSMContext):

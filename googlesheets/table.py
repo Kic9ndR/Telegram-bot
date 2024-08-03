@@ -1,6 +1,4 @@
-from ast import List
 import pygsheets
-from oauth2client.service_account import ServiceAccountCredentials	
 
 class GoogleTable:
     def __init__(

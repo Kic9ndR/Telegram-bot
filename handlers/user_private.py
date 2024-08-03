@@ -1,8 +1,9 @@
-import asyncio
+import html
+import markdown2
 from datetime import datetime
 from aiogram import types, Router, F, Bot
 from aiogram.filters import Command, StateFilter, or_f
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, InputFile
 from aiogram.filters.callback_data import CallbackData
 from aiogram.utils.markdown import hbold
 from filters.chat_types import ChatFilter
@@ -11,10 +12,8 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 
 
-from database.orm_query import orm_add_chech_work, orm_add_user, orm_get_ready_work, orm_get_user, orm_get_user_info
+from database.orm_query import orm_add_chech_work, orm_add_user, orm_get_admin_info, orm_get_ready_work, orm_get_user, orm_get_user_info
 from common.schemas import SimpleCalendarCallback
-from handlers import admin_private
-from handlers.user_group import get_admins
 from kbrd import reply
 from kbrd.calendar import SimpleCalendar
 
@@ -104,10 +103,16 @@ async def archive_cmd(message: types.Message):
 
 # ------------------------------------------------------------------------------------------------------
 @user_router.message(or_f(Command("about"), (F.text.lower() == "о боте 🤖")))
-async def about_cmd(message: types.Message):
-    await message.answer(
-        "Этот проект представляет собой Telegram-бота, который позволяет пользователям настраивать свой рабочий график и отслеживать текущую рабочую задачу. Пользователи могут отправлять выполненную работу через бота.", 
-        reply_markup=reply.start_kb)
+async def about_cmd(message: types.Message, session: AsyncSession, bot: Bot):
+    with open('user_about.md', 'r', encoding='utf-8') as user_list, open('admin_about.md', 'r', encoding='utf-8') as admin_list:
+        user_text = user_list.read()
+        admin_text = admin_list.read()
+    admin = await orm_get_admin_info(session)
+    for i in admin:
+        if message.from_user.id == i.user_id:
+            await message.answer(text=(admin_text), reply_markup=reply.start_kb)
+        else:
+            await message.answer(text=(user_text), reply_markup=reply.start_kb)
 
 
 # ------------------------------------------------------------------------------------------------------

@@ -54,6 +54,19 @@ class SendWork(StatesGroup):
     doc = State()
     user_name = State()
 
+
+@user_group.message(StateFilter('*'), Command("отмена"))
+@user_group.message(StateFilter('*'), F.text.casefold() == "отмена")
+async def cancel_handler(message: types.Message, state: FSMContext) -> None:
+
+    current_state = await state.get_state()
+    if current_state is None:
+        return
+
+    await state.clear()
+    await message.answer("Действия отменены")
+
+
 @user_group.message(StateFilter(None), F.document)
 async def check_work(message: types.Message, bot: Bot, state: FSMContext):
     if message.reply_to_message:
