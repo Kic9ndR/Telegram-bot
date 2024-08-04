@@ -1,5 +1,3 @@
-import html
-import markdown2
 from datetime import datetime
 from aiogram import types, Router, F, Bot
 from aiogram.filters import Command, StateFilter, or_f
@@ -78,8 +76,9 @@ async def send_work_comment(message: types.Message, state: FSMContext):
 async def send_work(message: types.Message, bot:Bot, state: FSMContext, session: AsyncSession):
     await state.update_data(work=message.text)
     data = await state.get_data()
-    await bot.send_message(chat_id='-1002192469164', text=
-                           f'Работа на проверку от @{message.from_user.username}\nКоментарий к работе: {data["comment"]}\n\nСсылка на работу:\n{message.text}')
+    await bot.send_message(chat_id='-1002165307959', text=
+                           f'Работа на проверку от @{message.from_user.username}\nКоментарий к работе: {data["comment"]}\n\nСсылка на работу:\n{message.text}',
+                           message_thread_id='2')
     await message.answer('Работа отправлена. Вы Молодец!', reply_markup=reply.start_kb)
     await state.clear()
     user = await orm_get_user(session, message.from_user.id)

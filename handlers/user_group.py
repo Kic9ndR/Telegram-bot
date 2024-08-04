@@ -17,11 +17,11 @@ from common.bot_cmds_list import admin
 
 user_group = Router()
 user_group.message.filter(ChatFilter(['group', 'supergroup']))
-chat_id = os.getenv('CHAT_ID')
+chat_id = '-1002165307959'
 
 @user_group.message(Command("add_admin"))
 async def get_admins(message: types.Message, bot: Bot, session: AsyncSession) -> None:
-    admins_list = await bot.get_chat_administrators(chat_id)
+    admins_list = await bot.get_chat_members('-1002192469164')
 
     get_admins_list = await orm_get_admin_info(session)
 
@@ -32,7 +32,7 @@ async def get_admins(message: types.Message, bot: Bot, session: AsyncSession) ->
                 ]
     
     for member in admins_list:
-        if (member and not member.user.is_bot) and (member.user.id not in admins_id):
+        if (member.user.is_bot != True) and (member.user.id not in admins_id):
             await orm_add_admin(
                 session, 
                 user_id = member.user.id,
@@ -40,14 +40,14 @@ async def get_admins(message: types.Message, bot: Bot, session: AsyncSession) ->
                 last_name = member.user.last_name,
                 username = member.user.username, 
                 )
-    
+
+
     bot.my_admins_list = admins_id
     if message.from_user.id in admins_id:
         await message.delete()
         await bot.set_my_commands(
             commands=admin, scope=types.BotCommandScopeAllPrivateChats()
     )
-        
 
 
 class SendWork(StatesGroup):
@@ -73,23 +73,24 @@ async def check_work(message: types.Message, bot: Bot, state: FSMContext):
         await state.set_state(SendWork.doc)
         await state.update_data(doc=message.document)
         await state.set_state(SendWork.user_name)
-        await bot.send_message(chat_id=chat_id, text="Напишите @username исполнителя")
+        await bot.send_message(chat_id=chat_id, text="Напишите @username исполнителя", message_thread_id='2')
 
 @user_group.message(SendWork.user_name, F.text.contains('@'))
 async def check_work(message: types.Message, bot: Bot, session: AsyncSession, state: FSMContext):
-    user_n = message.text.split('@')[-1]
-    await state.update_data(user_name=user_n)
-    work = await orm_get_user_info(session)
-    for i in work:
-        if user_n in i.username:
-            await bot.send_message(chat_id=chat_id, text="Отправил правки")
-            data = await state.get_data()
-            print(data['doc'])
-            file = data['doc']
-            await bot.send_document(chat_id=i.user_id, document=file.file_id, caption=
-                                    f'Вам отправили правки по вашей работе - {i.current_work}')
-            break
-    await state.clear()
+    if message.reply_to_message:
+        user_n = message.text.split('@')[-1]
+        await state.update_data(user_name=user_n)
+        work = await orm_get_user_info(session)
+        for i in work:
+            if user_n in i.username:
+                await bot.send_message(chat_id=chat_id, text="Отправил правки", message_thread_id='2')
+                data = await state.get_data()
+                print(data['doc'])
+                file = data['doc']
+                await bot.send_document(chat_id=i.user_id, document=file.file_id, caption=
+                                        f'Вам отправили правки по вашей работе - {i.current_work}')
+                break
+        await state.clear()
 
 
 @user_group.message(F.text)

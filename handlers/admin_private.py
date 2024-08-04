@@ -114,9 +114,9 @@ async def send_work(callback: types.CallbackQuery, state: FSMContext, session: A
             await bot.send_photo(chat_id=user_id.user_id, photo=work.image, caption=
                                 f'💰 - {work.title}\n🗓 - {work.deadline}\n📂 - {work.file_name}\n👉 {work.file}')
 
-
-    await bot.send_photo(chat_id='-1002192469164', photo=work.image, caption=
-                    f"💰 - {work.title}\n🗓 - {work.deadline}\n📂 - {work.file_name}\n👉 {work.file}\n{work.worker_name}")
+    await bot.send_photo(chat_id='-1002038832368', photo=work.image, caption=
+                    f"💰 - {work.title}\n🗓 - {work.deadline}\n📂 - {work.file_name}\n👉 {work.file}\n{work.worker_name}",
+                    message_thread_id='173')
 
 
     await callback.answer()

@@ -56,7 +56,7 @@ async def choise_worker_btns(
         session: AsyncSession,
         sizes = (2,),
         ):
-    # wk_kb = []
+
     user_info = await orm_get_user_info(session)
     keyboard = InlineKeyboardBuilder()
 
