@@ -37,7 +37,6 @@ class UserID(Base):
 
     user_id: Mapped[int] = mapped_column(primary_key=True)
     first_name: Mapped[str] = mapped_column(String(150), nullable=False)
-    last_name: Mapped[str] = mapped_column(String(150), nullable=False)
     username: Mapped[str] = mapped_column(String(150), nullable=False)
     current_work: Mapped[str] = mapped_column(String(150), nullable=True)
 
@@ -48,7 +47,6 @@ class AdminID(Base):
 
     user_id: Mapped[int] = mapped_column(primary_key=True)
     first_name: Mapped[str] = mapped_column(String(150), nullable=False)
-    last_name: Mapped[str] = mapped_column(String(150), nullable=False)
     username: Mapped[str] = mapped_column(String(150), nullable=False)
 
 ###################################################################################################################
@@ -58,6 +56,5 @@ class WorkCheck(Base):
 
     user_id: Mapped[int] = mapped_column(primary_key=True)
     first_name: Mapped[str] = mapped_column(String(150), nullable=False)
-    last_name: Mapped[str] = mapped_column(String(150), nullable=False)
     username: Mapped[str] = mapped_column(String(150), nullable=False)
     title: Mapped[str] = mapped_column(String(150), nullable=False)

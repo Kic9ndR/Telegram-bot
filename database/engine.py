@@ -1,5 +1,4 @@
 import os
-from requests import session
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 
 from database.models import Base

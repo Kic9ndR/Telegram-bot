@@ -27,6 +27,6 @@ class GoogleTable:
     def get_second_column(self):
         googlesheet_client = self._get_googlesheet_client()
         sheets = googlesheet_client.open_by_url(self.googlesheet_file_url)
-        sheet1 = sheets.sheet1
-        data = sheet1.get_all_values()
-        return [row[1] for row in data[1:]]
+        sheet = sheets.worksheet_by_title("Проверяющие")
+        data = sheet.get_all_values()
+        return [row[6] for row in data[0:]]

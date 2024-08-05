@@ -27,16 +27,16 @@ start_kb = ReplyKeyboardMarkup(
 admin_kb = ReplyKeyboardMarkup(
     keyboard=[
         [
-            KeyboardButton(text='Список сотрудников'),
-            KeyboardButton(text='Таблица работ'),
+            KeyboardButton(text='Список сотрудников 📋'),
+            KeyboardButton(text='Таблица работ 𝄜'),
 
         ],
         [
-            KeyboardButton(text='Список работ'),
-            KeyboardButton(text='В процессе создания'),
+            KeyboardButton(text='Список работ 📜'),
+            KeyboardButton(text='В процессе создания 🔄'),
         ],
         [
-            KeyboardButton(text='Создание задачи'),
+            KeyboardButton(text='Создание задачи ✍🏼'),
         ],
     ],
     resize_keyboard=True,
@@ -55,19 +55,19 @@ admin_nav = ReplyKeyboardMarkup(
 )
 
 #----------------------------------------------------------------------------------
-timetable_kb = ReplyKeyboardMarkup(
-    keyboard=[
-        [
-            KeyboardButton(text='Работаю 🖥️'),
-            KeyboardButton(text='Не работаю 😴'),
-        ],
-        [
-            KeyboardButton(text='В начало ↩️'),
-        ],
-    ],
-    resize_keyboard=True,
-    input_field_placeholder="Выберите нужный пункт:"
-)
+# timetable_kb = ReplyKeyboardMarkup(
+#     keyboard=[
+#         [
+#             KeyboardButton(text='Работаю 🖥️'),
+#             KeyboardButton(text='Не работаю 😴'),
+#         ],
+#         [
+#             KeyboardButton(text='В начало ↩️'),
+#         ],
+#     ],
+#     resize_keyboard=True,
+#     input_field_placeholder="Выберите нужный пункт:"
+# )
 
 #----------------------------------------------------------------------------------
 send_work_kb = ReplyKeyboardMarkup(

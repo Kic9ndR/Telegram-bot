@@ -1,11 +1,5 @@
 import calendar
 from datetime import datetime, timedelta
-from typing import Optional
-from enum import Enum
-
-from pydantic import BaseModel, conlist, Field
-
-from aiogram.filters.callback_data import CallbackData
 
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.types import CallbackQuery

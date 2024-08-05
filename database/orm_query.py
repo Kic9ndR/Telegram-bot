@@ -1,12 +1,6 @@
-from hmac import new
-import math
-from unittest.util import strclass
-from sqlalchemy import Column, String, insert, select, update, delete
-from sqlalchemy.orm import joinedload
+from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from database.models import AdminID, UnreadyWorks, UserID, Work, WorkCheck
-
-
 
     
 ############################################## Добавление id администраторов ##############################################
@@ -15,7 +9,6 @@ async def orm_add_admin(
     session: AsyncSession,
     user_id: int,
     first_name: str | None = None,
-    last_name: str | None = None,
     username: str | None = None,
 ):
     query = select(AdminID).where(AdminID.user_id == user_id)
@@ -25,7 +18,6 @@ async def orm_add_admin(
             AdminID(
                 user_id=user_id, 
                 first_name=first_name, 
-                last_name=last_name, 
                 username=username, 
                 )
         )
@@ -38,15 +30,21 @@ async def orm_get_admin_info(session: AsyncSession):
     result = await session.execute(query)
     return result.scalars().all()
 
+def get_admin_info(session):
+    query = select(AdminID)
+    result = session.execute(query)
+    return result.scalars().all()
+
+
+
 ############################################## Добавление id пользователей ##############################################
 
 async def orm_add_user(
     session: AsyncSession,
     user_id: int,
-    first_name: str | None = None,
-    last_name: str | None = None,
-    username: str | None = None,
-    current_work: str | None = None,
+    first_name: str,
+    username: str,
+    current_work: str,
 ):
     query = select(UserID).where(UserID.user_id == user_id)
     result = await session.execute(query)
@@ -54,8 +52,7 @@ async def orm_add_user(
         session.add(
             UserID(
                 user_id=user_id, 
-                first_name=first_name, 
-                last_name=last_name, 
+                first_name=first_name,
                 username=username, 
                 current_work=current_work
                 )
@@ -68,8 +65,8 @@ async def orm_add_user(
 async def orm_get_user_info(session: AsyncSession):
     query = select(UserID)
     result = await session.execute(query)
-    user = result.scalars().all()
-    return user
+    return result.scalars().all()
+
 
 async def orm_get_user(session: AsyncSession, user_id):
     query = select(UserID).where(UserID.user_id == user_id)
@@ -86,6 +83,11 @@ async def orm_add_current_work(session: AsyncSession, user_id: int, title: str):
     await session.execute(query)
     await session.commit()
 
+
+async def orm_delete_user_work(session: AsyncSession, title: str):
+    query = update(UserID).where(UserID.current_work == title).values(current_work=None)
+    await session.execute(query)
+    await session.commit()
 
 ############################################## Создание работы ##############################################
 
@@ -121,7 +123,6 @@ async def orm_add_chech_work(
         session,
         user_id: int,
         first_name: str,
-        last_name: str,
         username: str,
         title: str,
     ):
@@ -133,15 +134,11 @@ async def orm_add_chech_work(
             WorkCheck(
                     user_id = user_id,
                     first_name = first_name,
-                    last_name = last_name,
                     username = username,
                     title = title,
                 )
         )
         await session.commit()
-
-
-# async def orm_get_chech_work(session: AsyncSession):
     
 
 ############################################## Удаление незаконченной работы ##############################################
@@ -175,6 +172,15 @@ async def orm_appoint_worker(session: AsyncSession, title_id: str, new_worker: s
         update(UnreadyWorks)
         .where(UnreadyWorks.title == title_id)
         ).values(worker_name=UnreadyWorks.worker_name + '\n' + new_worker)
+    
+    await session.execute(query)
+    await session.commit()
+
+async def orm_delete_worker(session: AsyncSession, title_id: str):
+    query = (
+        update(UnreadyWorks)
+        .where(UnreadyWorks.title == title_id)
+        ).values(worker_name='')
     
     await session.execute(query)
     await session.commit()
