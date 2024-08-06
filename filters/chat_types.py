@@ -1,9 +1,5 @@
 from aiogram.filters import Filter
 from aiogram import types, Bot
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from database.orm_query import orm_get_admin_info
-from common.bot_cmds_list import admin
 
 
 class ChatFilter(Filter):

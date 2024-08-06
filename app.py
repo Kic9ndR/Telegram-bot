@@ -49,7 +49,7 @@ async def main():
         commands=private, scope=types.BotCommandScopeAllPrivateChats()
     )
 
-    await db.start_polling(bot, allowed_updates=db.resolve_used_update_types(), polling_timeout=15)
+    await db.start_polling(bot, allowed_updates=db.resolve_used_update_types(), polling_timeout=30)
 
 
 asyncio.run(main())

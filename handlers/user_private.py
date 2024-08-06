@@ -14,8 +14,12 @@ from kbrd import reply
 
 user_router = Router()
 user_router.message.filter(ChatFilter(["private"]))
-chat_id = -1002165307959
-message_thread = 2
+
+user_chat = os.getenv('USER_CHAT')
+admin_chat = os.getenv('ADMIN_CHAT')
+message_thread = 811            # Тестовое значение
+# chat_id = -1002165307959
+# message_thread = 2
 
 
 @user_router.message(
@@ -63,13 +67,9 @@ class SendWork(StatesGroup):
 @user_router.message(
     or_f(Command("send work"), (F.text.lower() == "отправить работу 📧"))
 )
-async def send_work_cmd(message: types.Message, state: FSMContext, session: AsyncSession):
-    for i in await orm_get_user_info(session):
-        if i.current_work != None:            
-            await message.answer("Оставь комментарий к работе", reply_markup=reply.send_work_kb)
-            await state.set_state(SendWork.comment)
-        else:
-            await message.answer("У Вас нет назначенной работы. Пожалуйста, обратитесь к руководителю для уточнения")
+async def send_work_cmd(message: types.Message, state: FSMContext):
+    await message.answer("Оставь комментарий к работе", reply_markup=reply.send_work_kb)
+    await state.set_state(SendWork.comment)
 
 
 @user_router.message(SendWork.comment, F.text)
@@ -83,7 +83,7 @@ async def send_work_comment(message: types.Message, state: FSMContext):
 async def send_work(message: types.Message, bot:Bot, state: FSMContext, session: AsyncSession):
     await state.update_data(work=message.text)
     data = await state.get_data()
-    await bot.send_message(chat_id=chat_id, text=
+    await bot.send_message(chat_id=int(admin_chat), text=
                 f'Работа на проверку от @{message.from_user.username}\nКоментарий к работе: {data["comment"]}\n\nСсылка на работу:\n{message.text}',
                 message_thread_id=message_thread)
     await message.answer('Работа отправлена. Вы Молодец!', reply_markup=reply.start_kb)
@@ -108,10 +108,10 @@ async def archive_cmd(message: types.Message):
 
 # ------------------------------------------------------------------------------------------------------
 @user_router.message(or_f(Command("about"), (F.text.lower() == "о боте 🤖")))
-async def about_cmd(message: types.Message, session: AsyncSession, bot: Bot):
-    with open('user_about.md', 'r', encoding='utf-8') as user_list, open('admin_about.md', 'r', encoding='utf-8') as admin_list:
+async def about_cmd(message: types.Message):
+    with open('user_about.md', 'r', encoding='utf-8') as user_list:
         user_text = user_list.read()
-        admin_text = admin_list.read()
+
     await message.answer(text=(user_text), reply_markup=reply.start_kb)
 
 

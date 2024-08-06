@@ -1,3 +1,4 @@
+import os
 from aiogram import F, Bot, Router, types
 from aiogram.filters import Command, StateFilter, or_f
 from aiogram.fsm.state import StatesGroup, State
@@ -18,6 +19,8 @@ from kbrd.reply import admin_kb
 #----------------------------------------------------------------------------------
 admin_router = Router()
 admin_router.message.filter(ChatFilter(["private"]), IsAdmin())
+user_chat = os.getenv('USER_CHAT')
+admin_chat = os.getenv('ADMIN_CHAT')
 
 
 class CreateTask(StatesGroup):
@@ -29,6 +32,7 @@ class CreateTask(StatesGroup):
     image = State()
 
     title_for_change = ''
+    status_create = bool
 
     texts = {
         'CreateTask:title': 'Введите улицу повторно: ',
@@ -123,7 +127,7 @@ async def send_work(callback: types.CallbackQuery, session: AsyncSession, bot: B
     except Exception as e:
         await callback.message.answer(f'Ошибка: {e}\n')
 
-    await bot.send_photo(chat_id='-1002038832368', photo=work.image, caption=
+    await bot.send_photo(chat_id=int(user_chat), photo=work.image, caption=
                     f"💰 - {work.title}\n🗓 - {work.deadline}\n📂 - {work.file_name}\n👉 {work.file}\n{work.worker_name}",
                     message_thread_id='173')
 
@@ -140,6 +144,7 @@ async def change_work(callback: types.CallbackQuery, state: FSMContext, session:
         title_for_change = await orm_query.orm_get_ready_work(session, title_id)
 
     print(title_for_change)
+    CreateTask.status_create = False
     CreateTask.title_for_change = title_for_change
     await callback.answer()
     await callback.message.answer(
@@ -157,6 +162,7 @@ async def change_work(callback: types.CallbackQuery, state: FSMContext, session:
 
 @admin_router.message(StateFilter(None), F.text == "Создание задачи ✍🏼")
 async def create_task(message: types.Message, state: FSMContext):
+    CreateTask.status_create = True
     await message.answer("Введите название работы: ", 
                          reply_markup=reply.admin_nav)
     await state.set_state(CreateTask.title)
@@ -197,7 +203,7 @@ async def back_step_handler(message: types.Message, state: FSMContext) -> None:
 
 @admin_router.message(CreateTask.title, or_f(F.text, F.text == '.'))
 async def set_title(message: types.Message, state: FSMContext):
-    if message.text == '.':
+    if message.text == '.' and CreateTask.status_create is False:
         await state.update_data(title=CreateTask.title_for_change.title)
     else:
         await state.update_data(title=message.text)
@@ -214,7 +220,7 @@ async def set_title2(message: types.Message, state: FSMContext):
 
 @admin_router.message(CreateTask.deadline, or_f(F.text, F.text == '.'))
 async def set_deadline(message: types.Message, state: FSMContext):
-    if message.text == '.':
+    if message.text == '.' and CreateTask.status_create is False:
         await state.update_data(deadline = CreateTask.title_for_change.deadline)
     else:
         await state.update_data(deadline=message.text)
@@ -230,27 +236,27 @@ async def set_deadline2(message: types.Message, state: FSMContext):
 
 @admin_router.message(CreateTask.file_name, or_f(F.text, F.text == '.'))
 async def set_file_name(message: types.Message, state: FSMContext):
-    if message.text == '.':
+    if message.text == '.' and CreateTask.status_create is False:
         await state.update_data(file_name = CreateTask.title_for_change.file_name)
     else:
         await state.update_data(file_name=message.text)
-    await message.answer("Загрузите файл: ")
+    await message.answer("Добавьте сссылку на рабочие файлы ")
     await state.set_state(CreateTask.file)
 
 @admin_router.message(CreateTask.file_name)
 async def set_file_name2(message: types.Message, state: FSMContext):
-    await message.answer("Ввели данные неверно. Необходимо ввести название файла")
+    await message.answer("Ввели данные неверно.\nНеобходимо добавить сссылку на рабочие файлы")
 
 
 ################################################ Ввод файла ################################################
 
 @admin_router.message(CreateTask.file, or_f(F.text, F.text == '.'))
 async def set_file(message: types.Message, state: FSMContext):
-    if message.text == '.':
+    if message.text == '.' and CreateTask.status_create is False:
         await state.update_data(file=CreateTask.title_for_change.file)
     else:
         await state.update_data(file=message.text)
-    await message.answer("Загрузите фото: ")
+    await message.answer("Загрузите фото обложки задачи")
     await state.set_state(CreateTask.image)
     # await message.answer('Если хотите изменить исполнителей напишите: "Да"\n(При изменении удалятся все сотрудники).')
     # await state.set_state(CreateTask.worker_name)
@@ -258,7 +264,7 @@ async def set_file(message: types.Message, state: FSMContext):
 
 @admin_router.message(CreateTask.file)
 async def set_file2(message: types.Message):
-    await message.answer("Ввели данные неверно. Необходимо загрузить файл ")
+    await message.answer("Ввели данные неверно.\nНеобходимо загрузить фото обложки задачи ")
 
 
 ################################################ Изменение Исполнителя ################################################
@@ -278,14 +284,14 @@ async def set_file2(message: types.Message):
 
 @admin_router.message(CreateTask.image, or_f(F.photo, F.text == '.'))
 async def add_image(message: types.Message, state: FSMContext, session: AsyncSession):
-    if message.text == '.':
+    if message.text == '.' and CreateTask.status_create is False:
         await state.update_data(image=CreateTask.title_for_change.image)
     else:
         await state.update_data(image=message.photo[-1].file_id)
     data = await state.get_data()
     title_id = data['title']
     try:
-        if CreateTask.title_for_change:
+        if CreateTask.status_create is False:
             await orm_query.orm_change(session, CreateTask.title_for_change.title, data)
             await message.answer("Задача обновлена!", reply_markup=admin_kb)
         else:
@@ -338,6 +344,39 @@ async def add_image(message: types.Message, state: FSMContext, session: AsyncSes
 @admin_router.message(CreateTask.image)
 async def add_image2(message: types.Message):
     await message.answer("Ввели данные неверно. Необходимо загрузить фото")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 #################################################################################################################
