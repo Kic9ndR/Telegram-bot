@@ -117,6 +117,17 @@ async def orm_add_work(
         await session.commit()
 
 
+async def orm_update_worker_work(session: AsyncSession, title_id: str, new_worker: str):
+    query = (
+        update(Work)
+        .where(Work.title == title_id)
+        ).values(worker_name=new_worker)
+    
+    await session.execute(query)
+    await session.commit()
+
+
+
 ############################################## Создание базы для проверкии работ ##############################################
 
 async def orm_add_chech_work(
@@ -140,6 +151,29 @@ async def orm_add_chech_work(
         )
         await session.commit()
     
+
+async def orm_delete_check_work(session: AsyncSession, title: str):
+    query = delete(WorkCheck).where(WorkCheck.title == title)
+    await session.execute(query)
+    await session.commit()
+
+
+async def orm_update_check_work(session: AsyncSession, title_id: str, new_title: str):
+    query = (
+        update(WorkCheck)
+        .where(WorkCheck.title == title_id)
+        ).values(title=new_title)
+    
+    await session.execute(query)
+    await session.commit()
+
+
+async def orm_get_check_work(session: AsyncSession, user_id):
+    query = select(WorkCheck).where(WorkCheck.user_id == user_id)
+    result = await session.execute(query)
+    return result.scalar()
+
+
 
 ############################################## Удаление работ ##############################################
 
@@ -182,6 +216,7 @@ async def orm_appoint_worker(session: AsyncSession, title_id: str, new_worker: s
     await session.execute(query)
     await session.commit()
 
+
 async def orm_delete_worker(session: AsyncSession, title_id: str):
     query = (
         update(UnreadyWorks)
@@ -192,10 +227,27 @@ async def orm_delete_worker(session: AsyncSession, title_id: str):
     await session.commit()
 
 
-async def orm_change(session: AsyncSession, title:str, data: dict):
+async def orm_change_unready(session: AsyncSession, title:str, data: dict):
     query = (
         update(UnreadyWorks)
         .where(UnreadyWorks.title == title)
+        ).values(
+            title = data['title'],
+            deadline = data['deadline'],
+            file_name = data['file_name'],
+            file = data['file'],
+            image = data['image'],
+        )
+    
+    await session.execute(query)
+    await session.commit()
+
+
+
+async def orm_change_ready_work(session: AsyncSession, title:str, data: dict):
+    query = (
+        update(Work)
+        .where(Work.title == title)
         ).values(
             title = data['title'],
             deadline = data['deadline'],

@@ -19,7 +19,7 @@ from common.bot_cmds_list import private, admin
 # ----------------------------------------------------------------------------------
 
 bot = Bot(token=os.getenv("TOKEN"))
-db = Dispatcher()
+db = Dispatcher(parse_mode='HTML')
 
 db.include_router(user_router)
 db.include_router(user_group)

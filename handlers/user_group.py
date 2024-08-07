@@ -7,8 +7,7 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 
 
-
-from database.orm_query import orm_add_admin, orm_delete_user_work, orm_get_admin_info, orm_get_user_info
+from database.orm_query import *
 from filters.chat_types import ChatFilter
 from common.bot_cmds_list import admin
 
@@ -56,14 +55,26 @@ async def add_admins(message: types.Message, bot: Bot, session: AsyncSession) ->
         await message.answer('Ай-ай-ай, Вам сюда нельзя!')
 
 
+####################################################################################################################
+
+@user_group.callback_query(F.data.startswith('accept_'))
+async def send_accepted_work(callback: types.CallbackQuery, bot: Bot, session: AsyncSession):
+    user_id = callback.data.split('_')[-1]
+    user_info = await orm_get_user(session, user_id)
+    await callback.answer('Работу принял')
+    await bot.send_message(chat_id=int(admin_chat), text=
+                    "Отлично, работу принял", message_thread_id=int(admin_message_thread)
+                )
+    await bot.send_message(chat_id=user_info.user_id, text=f'Вашу работу:\n{user_info.current_work}\nПриняли!')
+    await orm_delete_user_work(session, user_info.current_work)
+
 
 ####################################################################################################################
 
 class SendWork(StatesGroup):
-    doc = State()
     user_name = State()
+    doc = State()
 
-####################################################################################################################
 
 @user_group.message(StateFilter('*'), Command("отмена"))
 @user_group.message(StateFilter('*'), F.text.casefold() == "отмена")
@@ -77,74 +88,32 @@ async def cancel_handler(message: types.Message, state: FSMContext) -> None:
     await message.answer("Действия отменены")
 
 
-####################################################################################################################
+@user_group.callback_query(StateFilter(None), F.data.startswith('edits_'))
+async def send_edits(callback: types.CallbackQuery, state: FSMContext):
+    user_id = callback.data.split('_')[-1]
 
-@user_group.message(StateFilter(None), F.document)
-async def check_work(message: types.Message, bot: Bot, state: FSMContext):
-    if message.reply_to_message:
-        await state.set_state(SendWork.doc)
-        await state.update_data(doc=message.document)
-        await state.set_state(SendWork.user_name)
-        await bot.send_message(chat_id=int(admin_chat), text="Напишите @username исполнителя", message_thread_id=int(admin_message_thread))
+    await state.set_state(SendWork.user_name)
+    await state.update_data(user_name=user_id)
+    await state.set_state(SendWork.doc)
 
-
-####################################################################################################################
-
-@user_group.message(SendWork.user_name, F.text.contains('@'))
-async def check_work(message: types.Message, bot: Bot, session: AsyncSession, state: FSMContext):
-    if message.reply_to_message:
-        user_n = message.text.split('@')[-1]
-        await state.update_data(user_name=user_n)
-        work = await orm_get_user_info(session)
-        for i in work:
-            if user_n in i.username:
-                await bot.send_message(chat_id=int(admin_chat), text="Отправил правки", message_thread_id=int(admin_message_thread))
-                data = await state.get_data()
-                file = data['doc']
-                await bot.send_document(chat_id=i.user_id, document=file.file_id, caption=
-                                            f'Вам отправили правки по вашей работе - {i.current_work}')
-                break
-        await state.clear()
+    await callback.answer()
+    await callback.message.answer('Загрузите файл')
 
 
-####################################################################################################################
+@user_group.message(SendWork.doc, F.document)
+async def add_doc(message: types.Message, bot: Bot, session: AsyncSession, state: FSMContext):
+    await state.update_data(doc=message.document)
 
-class AcceptWork(StatesGroup):
-    username = State()
+    data = await state.get_data()
+    file = data['doc']
+    user = data['user_name']
+    work = await orm_get_user(session, user)
+    await bot.send_message(chat_id=int(admin_chat), text="Отправил правки", message_thread_id=int(admin_message_thread))
+    await bot.send_document(chat_id=user, document=file.file_id, caption=
+                        f'Вам отправили правки по вашей работе - {work.current_work}')
 
-@user_group.message(StateFilter(None), F.text)
-async def user_name(message: types.Message, bot: Bot, session: AsyncSession, state: FSMContext):
-    if message.reply_to_message and message.text.lower().startswith('прин'):
-        await bot.send_message(chat_id=int(admin_chat), text=
-                               'Введите @username в ответ на сообщение', message_thread_id=int(admin_message_thread))
-        await state.set_state(AcceptWork.username)
-    elif message.reply_to_message:
-        await bot.send_message(chat_id=int(admin_chat), text=
-                "Для отправки правок ответьте на данное сообщение приложенным файлом\n\nЕсли хотите принять работу, то ответьте на сообщение 'Принял'", message_thread_id=int(admin_message_thread)
-                )
+    await state.clear()
 
-@user_group.message(AcceptWork.username, F.text.contains('@'))
-async def send_accepted_work(message: types.Message, bot: Bot, session: AsyncSession, state: FSMContext):
-    if message.reply_to_message:
-        user_n = message.text.split('@')[-1]
-        await state.update_data(username=user_n)
-        work = await orm_get_user_info(session)
-        for i in work:
-            if user_n in i.username:
-                await bot.send_message(chat_id=int(admin_chat), text="Отлично, работу принял", message_thread_id=int(admin_message_thread))
-                await bot.send_message(chat_id=i.user_id, text=f'Вашу работу:\n{i.current_work}\nПриняли!')
-                await orm_delete_user_work(session, i.current_work)
-        await state.clear()
-
-
-TOKEN=6961517992:AAF4we6TtUo8-RTESeU5hrkTeoKp3IWENJs
-# Тестовый токен
-DB_URL=sqlite+aiosqlite:///my_sql_base.db
-
-ADMIN_CHAT=-1002192469164
-ADMIN_MESSAGE_THREAD=811
-# Тестовая группа
-
-USER_CHAT=-1002192469164
-USER_MESSAGE_THREAD=811
-# Тестовая группа
+@user_group.message(SendWork.doc)
+async def add_doc2(message: types.Message):
+    await message.answer("Неправильно.\nЗагрузите, пожалуйста, файл 🙏")

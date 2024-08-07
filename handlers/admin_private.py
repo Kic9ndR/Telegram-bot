@@ -3,7 +3,6 @@ from aiogram import F, Bot, Router, types
 from aiogram.filters import Command, StateFilter, or_f
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -39,24 +38,26 @@ class CreateTask(StatesGroup):
     status_create = bool
 
     texts = {
-        'CreateTask:title': 'Введите улицу повторно: ',
+        'CreateTask:title': 'Введите работы повторно: ',
         'CreateTask:deadline': 'Введите срок выполнения повторно: ',
         'CreateTask:file_name': 'Введите названия файла повторно: ',
-        'CreateTask:file': 'Загрузите файл повторно: ', 
-        'CreateTask:image': 'Загрузите изображение повторно: ',
+        'CreateTask:file': 'Отправте ссылку повторно: ', 
+        'CreateTask:image': 'Загрузите фото повторно: ',
     }
 
 #---------------------------------------------------------------------------------- 
 @admin_router.message(Command("admin"))
-async def admin(message: types.Message):
+async def admin(message: types.Message, state: FSMContext):
+    await state.clear()
     await message.answer("Что хотите сделать?", reply_markup=admin_kb)
 
 
 #----------------------------------------------------------------------------------
 @admin_router.message(F.text == "Список сотрудников 📋")
 async def project_klnd(message: types.Message, session: AsyncSession):
+    await message.answer('Список сотрудников Века:')
     for users in await orm_query.orm_get_user_info(session):
-        await message.answer(f'Список сотрудников Века:\n{users.first_name} @{users.username}', reply_markup=admin_kb)
+        await message.answer(f'{users.first_name} @{users.username}', reply_markup=admin_kb)
 
 
 """
@@ -80,12 +81,12 @@ async def project_klnd(message: types.Message, session: AsyncSession):
     for title in await orm_query.orm_get_all_works(session):
         await message.answer_photo(
             title.image,
-            caption=f'{title.title}\nСрок выполнения: {title.deadline}\nСсылка на файл: {title.file}\nНазначены:\n{title.worker_name}',
+            caption=f'{title.title}\nСрок выполнения: {title.deadline}\nСсылка на файл: <a href="{title.file}"> Work Files </a>\nНазначены:\n{title.worker_name}',
             reply_markup=get_callback_btns(btns={
                 'Назначить': f'appoint_{title.title}',
                 'Изменить': f'change_{title.title}',
                 'Полностью удалить работу': f'deleteready_{title.title}',
-                })
+                }), parse_mode='HTML'
             )
 
 
@@ -93,15 +94,16 @@ async def project_klnd(message: types.Message, session: AsyncSession):
 async def process_of_creation(message: types.Message, session: AsyncSession):
     await message.answer('Работы в процессе создания:')
     for title in await orm_query.orm_get_all_unready(session):
+        hyperlink = f'<a href="{title.file}"> Work Files </a>'
         await message.answer_photo(
             title.image,
-            caption=f'{title.title}\nСрок выполнения: {title.deadline}\nСсылка на файл: {title.file}\nСписок исполнителей\n{title.worker_name}',
+            caption=f'{title.title}\nСрок выполнения: {title.deadline}\nСсылка на файл: <a href="{title.file}"> Work Files </a>\nСписок исполнителей\n{title.worker_name}',
             reply_markup=get_callback_btns(btns={
                 'Назначить': f'appoint_{title.title}',
                 'Изменить': f'change_{title.title}',
                 'Полностью удалить работу': f'delete_{title.title}',
                 'Отправить в работу': f'send_{title.title}',
-            }, sizes=(2,1,1))
+            }, sizes=(2,1,1)), parse_mode='HTML',
         )
 
 
@@ -151,15 +153,18 @@ async def send_work(callback: types.CallbackQuery, session: AsyncSession, bot: B
         for user_id in await orm_query.orm_get_user_info(session):
             if user_id.username in work.worker_name:
                 await orm_query.orm_add_current_work(session, user_id.user_id, title_id) 
+                task = work.worker_name.split("-")[0]
                 await bot.send_message(chat_id=user_id.user_id, text='Вам назначена новая работа')
                 await bot.send_photo(chat_id=user_id.user_id, photo=work.image, caption=
-                                    f'💰 - {work.title}\n🗓 - {work.deadline}\n📂 - {work.file_name}\n👉 {work.file}')
+                        f'💰 - {work.title}\n🗓 - {work.deadline}\n📂 - {work.file_name}\n👉 - <a href="{work.file}"> Work Files </a>\n{task}',
+                        parse_mode='HTML')
     except Exception as e:
         await callback.message.answer(f'Ошибка: {e}\n')
 
+    hyperlink = f'<a href="{work.file}"> Work Files </a>'
     await bot.send_photo(chat_id=int(user_chat), photo=work.image, caption=
-                    f"💰 - {work.title}\n🗓 - {work.deadline}\n📂 - {work.file_name}\n👉 {work.file}\n{work.worker_name}",
-                    message_thread_id=int(user_message_thread))
+                    f"💰 - {work.title}\n🗓 - {work.deadline}\n📂 - {work.file_name}\n👉 {hyperlink}\n{work.worker_name}",
+                    message_thread_id=int(user_message_thread), parse_mode='HTML')
 
 
     await callback.answer()
@@ -177,7 +182,6 @@ async def change_work(callback: types.CallbackQuery, state: FSMContext, session:
     if title_for_change is None:
         title_for_change = await orm_query.orm_get_ready_work(session, title_id)
 
-    print(title_for_change)
     CreateTask.status_create = False
     CreateTask.title_for_change = title_for_change
     await callback.answer()
@@ -317,23 +321,28 @@ async def set_file2(message: types.Message):
 ################################################ Загрузка фото ################################################
 
 @admin_router.message(CreateTask.image, or_f(F.photo, F.text == '.'))
-async def add_image(message: types.Message, state: FSMContext, session: AsyncSession):
+async def add_image(message: types.Message, state: FSMContext, session: AsyncSession, bot: Bot):
     if message.text == '.' and CreateTask.status_create is False:
         await state.update_data(image=CreateTask.title_for_change.image)
     else:
         await state.update_data(image=message.photo[-1].file_id)
     data = await state.get_data()
     title_id = data['title']
+    i = await orm_query.orm_get_work(session, title_id)
+
     try:
         if CreateTask.status_create is False:
-            await orm_query.orm_change(session, CreateTask.title_for_change.title, data)
+            if i is not None:          # Выполняется проверка есть ли в UnreadyWorks данное название или нет
+                await orm_query.orm_change_unready(session, CreateTask.title_for_change.title, data)
+            else:
+                await orm_query.orm_change_ready_work(session, CreateTask.title_for_change.title, data)
             await message.answer("Задача обновлена!", reply_markup=admin_kb)
         else:
             await orm_query.orm_add_task(session, data)
             await message.answer("Задача добавлена!", reply_markup=admin_kb)
     except Exception as e:
         await message.answer(
-            f"Ошибка: \n{str(e)}\nОбратись к программеру, он опять денег хочет",
+            f"Ошибка: \n{str(e)}\nОбратись к программеру",
             reply_markup=admin_kb,
         )
 
@@ -343,35 +352,33 @@ async def add_image(message: types.Message, state: FSMContext, session: AsyncSes
     #     await orm_query.orm_delete_worker(session, title_id)
 
 
-
     """
     Если добавляли работу выводим список незаконченных работ
     """
-    i = await orm_query.orm_get_work(session, title_id)
-    if i.title == title_id:
-        await message.answer_photo(photo=i.image, caption=
-            f'{i.title}\nСрок выполнения: {i.deadline}\nСсылка на файл: {i.file}\nСписок исполнителей\n{i.worker_name}',
+
+    if i is not None:            # Выполняется проверка есть ли в UnreadyWorks данное название или нет
+        await message.answer_photo(photo=data['image'], caption=
+            f'{i.title}\nСрок выполнения: {i.deadline}\nСсылка на файл: <a href="{i.file}"> Work Files </a>\nСписок исполнителей\n{i.worker_name}',
             reply_markup=get_callback_btns(btns={
                 'Назначить': f'appoint_{i.title}',
                 'Изменить': f'change_{i.title}',
                 'Полностью удалить работу': f'delete_{i.title}',
                 'Отправить в работу': f'send_{i.title}',
-            }, sizes=(2,1,1))
+            }, sizes=(2,1,1)), parse_mode='HTML'
         )
     else:
         """
         Если изменяли работу выводим список законченных работ
         """
-        for i in data:
-            await message.answer_photo(photo=i.image, caption=
-                f'{i.title}\nСрок выполнения: {i.deadline}\nСсылка на файл: {i.file}\nСписок исполнителей\n{i.worker_name}',
-                reply_markup=get_callback_btns(btns={
-                        'Назначить': f'appoint_{i.title}',
-                        'Изменить': f'change_{i.title}',
-                        'Полностью удалить работу': f'delete_{i.title}',
-                    })
-                )
-
+        i = await orm_query.orm_get_ready_work(session, title_id)
+        await message.answer_photo(photo=i.image, caption=
+            f'{i.title}\nСрок выполнения: {i.deadline}\nСсылка на файл: <a href="{i.file}"> Work Files </a>\nСписок исполнителей\n{i.worker_name}',
+            reply_markup=get_callback_btns(btns={
+                    'Назначить': f'appoint_{i.title}',
+                    'Изменить': f'change_{i.title}',
+                    'Полностью удалить работу': f'delete_{i.title}',
+                }), parse_mode='HTML'
+            )
   
     CreateTask.title_for_change = ''
 
@@ -438,18 +445,39 @@ async def add_name(callback: types.CallbackQuery, state: FSMContext, session: As
     
     await callback.message.delete()
 
-    i = await orm_query.orm_get_work(session, title_id)
-    await callback.message.answer_photo(photo=i.image, caption=
-        f'{i.title}\nСрок выполнения: {i.deadline}\nСсылка на файл: {i.file}\nСписок исполнителей\n{i.worker_name}',
-        reply_markup=get_callback_btns(btns={
-                'Назначить': f'appoint_{i.title}',
-                'Изменить': f'change_{i.title}',
-                'Полностью удалить работу': f'delete_{i.title}',
-                'Отправить в работу': f'send_{i.title}',
-            }, sizes=(2,1,1))
-        )
+    i = await orm_query.orm_get_ready_work(session, title_id)
+    if i.title != title_id:
+        await callback.message.answer_photo(photo=i.image, caption=
+            f'{i.title}\nСрок выполнения: {i.deadline}\nСсылка на файл: <a href="{i.file}"> Work Files </a>\nСписок исполнителей\n{i.worker_name}',
+            reply_markup=get_callback_btns(btns={
+                    'Назначить': f'appoint_{i.title}',
+                    'Изменить': f'change_{i.title}',
+                    'Полностью удалить работу': f'delete_{i.title}',
+                    'Отправить в работу': f'send_{i.title}',
+                }, sizes=(2,1,1)), parse_mode='HTML'
+            )
+    else:
+        work = await orm_query.orm_get_ready_work(session, title_id)
+        await orm_query.orm_update_worker_work(session, title_id, task_and_name)
+        task = data['task']
+        for user_id in await orm_query.orm_get_user_info(session):
+            if user_id.first_name in work.worker_name:
+                await orm_query.orm_add_current_work(session, user_id.user_id, title_id) 
+                await bot.send_message(chat_id=user_id.user_id, text='Вам назначена новая работа')
+                await bot.send_photo(chat_id=user_id.user_id, photo=work.image, caption=
+                        f'{work.title}\n🗓 Срок выполнения до - {work.deadline}\n📂 Название файла- {work.file_name}\n👉 - <a href="{work.file}"> Work Files </a>\nВаша задача -{task}',
+                        parse_mode="HTML")
+        
+        await callback.message.answer_photo(photo=i.image, caption=
+                f'{i.title}\nСрок выполнения: {i.deadline}\nСсылка на файл: <a href="{i.file}"> Work Files </a>\nСписок исполнителей\n{i.worker_name}',
+                reply_markup=get_callback_btns(btns={
+                        'Назначить': f'appoint_{i.title}',
+                        'Изменить': f'change_{i.title}',
+                        'Полностью удалить работу': f'delete_{i.title}',
+                    }), parse_mode='HTML'
+                )
 
 
 @admin_router.message(ChoiseWorker.name)
-async def add_name2(message: types.Message, state: FSMContext):
+async def add_name2(message: types.Message):
     await message.answer("Необходимо выбрать имя на клавиатуре")

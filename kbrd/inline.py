@@ -61,6 +61,6 @@ async def choise_worker_btns(
 
     for worker in user_info:
         keyboard.add(InlineKeyboardButton(text=
-                f'{worker.first_name} @{worker.username}', callback_data=f"{worker.first_name} @{worker.username}"))
+                f'{worker.first_name}', callback_data=f"{worker.first_name} @{worker.username}"))
 
     return keyboard.adjust(*sizes).as_markup()    

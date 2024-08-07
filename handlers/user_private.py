@@ -8,8 +8,9 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 
 
-from database.orm_query import orm_add_chech_work, orm_add_user, orm_get_ready_work, orm_get_user, orm_get_user_info
+from database.orm_query import *
 from kbrd import reply
+from kbrd.inline import get_callback_btns
 
 
 user_router = Router()
@@ -17,9 +18,12 @@ user_router.message.filter(ChatFilter(["private"]))
 
 user_chat = os.getenv('USER_CHAT')
 admin_chat = os.getenv('ADMIN_CHAT')
-admin_message_thread = os.getenv('ADMIN_MESSAGE_THREAD')            # Тестовое значение
-# chat_id = -1002165307959
-# message_thread = 2
+admin_message_thread = os.getenv('ADMIN_MESSAGE_THREAD')            # Тестовые значение
+
+
+class AddName(StatesGroup):
+    name = State()
+
 
 
 @user_router.message(
@@ -29,24 +33,38 @@ admin_message_thread = os.getenv('ADMIN_MESSAGE_THREAD')            # Тесто
 )
 async def start_cmd(message: types.Message, session: AsyncSession, state: FSMContext):
     await state.clear()
-    await message.answer("Что интересует?", reply_markup=reply.start_kb)
-    user = message.from_user
+    user = await orm_get_user(session, message.from_user.id)
 
-    if user.id not in await orm_get_user_info(session):
-        await orm_add_user(
-            session, 
-            user_id = user.id,
-            first_name = user.first_name,
-            username = user.username,
-            current_work = None,
-            )
+    if user is None:
+        await state.set_state(AddName.name)
+        await message.answer('Пожалуйста, введите имя и фамилию', reply_markup=reply.start_kb)
+    else:
+        await message.answer("Что интересует?", reply_markup=reply.start_kb)
+
+
+@user_router.message(AddName.name, F.text)
+async def add_name(message: types.Message, session: AsyncSession, state: FSMContext):
+    await state.update_data(name=message.text)
+    data = await state.get_data()
+    user = message.from_user
+    user_name = data['name']
+    await orm_add_user(
+        session, 
+        user_id = user.id,
+        first_name = user_name,
+        username = user.username,
+        current_work = None,
+        )
+    
+    await message.answer(f'Добавил Вас {user_name}, спасибо 😃', reply_markup=reply.start_kb)
+    await state.clear()
 
 
 #------------------------------------------------------------------------------------------------------
 @user_router.message(
     or_f(Command("current_work"), (F.text.lower() == "текущая работа ⏱"))
 )
-async def current_work_cmd(message: types.Message, session: AsyncSession):
+async def current_work_cmd(message: types.Message, session: AsyncSession, bot: Bot):
     user = await orm_get_user(session, message.from_user.id)
     try:
         if user.current_work == None:
@@ -85,19 +103,28 @@ async def send_work(message: types.Message, bot:Bot, state: FSMContext, session:
     data = await state.get_data()
     await bot.send_message(chat_id=int(admin_chat), text=
                 f'Работа на проверку от @{message.from_user.username}\nКоментарий к работе: {data["comment"]}\n\nСсылка на работу:\n{message.text}',
-                message_thread_id=int(admin_message_thread))
+                message_thread_id=int(admin_message_thread), reply_markup=get_callback_btns(btns={
+                    'Принять работу': f"accept_{message.from_user.id}",
+                    'Отправить правки': f"edits_{message.from_user.id}"
+                }, sizes={1,1}
+            )
+        )
     await message.answer('Работа отправлена. Вы Молодец!', reply_markup=reply.start_kb)
     await state.clear()
     user = await orm_get_user(session, message.from_user.id)
     work = await orm_get_ready_work(session, user.current_work)
+    check_work = await orm_get_check_work(session, user.user_id)
 
-    await orm_add_chech_work(            # Добавляем работу в базу данных "work check"
-        session, 
-        user_id = user.user_id,
-        first_name = user.first_name,
-        username = user.username,
-        title = work.title,
-        )
+    if user.user_id == check_work.user_id:
+        await orm_update_check_work(session, user.current_work, user.current_work)
+    else:
+        await orm_add_chech_work(            # Добавляем работу в базу данных "work check"
+            session, 
+            user_id = user.user_id,
+            first_name = user.first_name,
+            username = user.username,
+            title = work.title,
+            )
 
 
 # ------------------------------------------------------------------------------------------------------
