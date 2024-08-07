@@ -141,10 +141,16 @@ async def orm_add_chech_work(
         await session.commit()
     
 
-############################################## Удаление незаконченной работы ##############################################
+############################################## Удаление работ ##############################################
 
 async def orm_delete_un_work(session: AsyncSession, title: str):
     query = delete(UnreadyWorks).where(UnreadyWorks.title == title)
+    await session.execute(query)
+    await session.commit()
+
+
+async def orm_delete_ready_work(session: AsyncSession, title: str):
+    query = delete(Work).where(Work.title == title)
     await session.execute(query)
     await session.commit()
 

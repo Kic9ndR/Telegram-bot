@@ -19,8 +19,12 @@ from kbrd.reply import admin_kb
 #----------------------------------------------------------------------------------
 admin_router = Router()
 admin_router.message.filter(ChatFilter(["private"]), IsAdmin())
+
 user_chat = os.getenv('USER_CHAT')
+user_message_thread = os.getenv('USER_MESSAGE_THREAD')
+
 admin_chat = os.getenv('ADMIN_CHAT')
+admin_message_thread = os.getenv('ADMIN_MESSAGE_THREAD')
 
 
 class CreateTask(StatesGroup):
@@ -52,7 +56,7 @@ async def admin(message: types.Message):
 @admin_router.message(F.text == "Список сотрудников 📋")
 async def project_klnd(message: types.Message, session: AsyncSession):
     for users in await orm_query.orm_get_user_info(session):
-        await message.answer(f'Список сотрудников Века:\n{users.first_name} {users.username}', reply_markup=admin_kb)
+        await message.answer(f'Список сотрудников Века:\n{users.first_name} @{users.username}', reply_markup=admin_kb)
 
 
 """
@@ -79,8 +83,8 @@ async def project_klnd(message: types.Message, session: AsyncSession):
             caption=f'{title.title}\nСрок выполнения: {title.deadline}\nСсылка на файл: {title.file}\nНазначены:\n{title.worker_name}',
             reply_markup=get_callback_btns(btns={
                 'Назначить': f'appoint_{title.title}',
-                'Удалить': f'delete_{title.title}',
                 'Изменить': f'change_{title.title}',
+                'Полностью удалить работу': f'deleteready_{title.title}',
                 })
             )
 
@@ -95,11 +99,38 @@ async def process_of_creation(message: types.Message, session: AsyncSession):
             reply_markup=get_callback_btns(btns={
                 'Назначить': f'appoint_{title.title}',
                 'Изменить': f'change_{title.title}',
+                'Полностью удалить работу': f'delete_{title.title}',
                 'Отправить в работу': f'send_{title.title}',
-            })
+            }, sizes=(2,1,1))
         )
 
 
+
+"""
+Удаление выложенной в группу работы ===============================================================
+"""
+@admin_router.callback_query(StateFilter(None), F.data.startswith('deleteready_'))
+async def change_work(callback: types.CallbackQuery, session: AsyncSession):
+    title_id = callback.data.split('_')[-1]
+    await orm_query.orm_delete_ready_work(session, title_id)
+    await callback.answer('Работа удалена')
+    await callback.message.answer('Работа удалена')
+
+
+"""
+Удаление незаконченной работы =====================================================================
+"""
+@admin_router.callback_query(StateFilter(None), F.data.startswith('delete_'))
+async def change_work(callback: types.CallbackQuery, session: AsyncSession):
+    title_id = callback.data.split('_')[-1]
+    await orm_query.orm_delete_un_work(session, title_id)
+    await callback.answer('Работа удалена')
+    await callback.message.answer('Работа удалена')
+
+
+"""
+Отправка работы в группу и назначенным сотрудникам ================================================
+"""
 @admin_router.callback_query(StateFilter(None), F.data.startswith('send_'))
 async def send_work(callback: types.CallbackQuery, session: AsyncSession, bot: Bot):
     title_id = callback.data.split('_')[-1]
@@ -116,7 +147,6 @@ async def send_work(callback: types.CallbackQuery, session: AsyncSession, bot: B
         image = work.image,
         )
     
-
     try:
         for user_id in await orm_query.orm_get_user_info(session):
             if user_id.username in work.worker_name:
@@ -129,13 +159,17 @@ async def send_work(callback: types.CallbackQuery, session: AsyncSession, bot: B
 
     await bot.send_photo(chat_id=int(user_chat), photo=work.image, caption=
                     f"💰 - {work.title}\n🗓 - {work.deadline}\n📂 - {work.file_name}\n👉 {work.file}\n{work.worker_name}",
-                    message_thread_id='173')
+                    message_thread_id=int(user_message_thread))
 
 
     await callback.answer()
     await callback.message.answer('Работа отправлена!')
 
 
+
+"""
+Вход в состояние изменения работы =================================================================
+"""
 @admin_router.callback_query(StateFilter(None), F.data.startswith('change_'))
 async def change_work(callback: types.CallbackQuery, state: FSMContext, session: AsyncSession):
     title_id = callback.data.split('_')[-1]
@@ -318,10 +352,11 @@ async def add_image(message: types.Message, state: FSMContext, session: AsyncSes
         await message.answer_photo(photo=i.image, caption=
             f'{i.title}\nСрок выполнения: {i.deadline}\nСсылка на файл: {i.file}\nСписок исполнителей\n{i.worker_name}',
             reply_markup=get_callback_btns(btns={
-                    'Назначить': f'appoint_{i.title}',
-                    'Изменить': f'change_{i.title}',
-                    'Отправить в работу': f'send_{i.title}',
-                })
+                'Назначить': f'appoint_{i.title}',
+                'Изменить': f'change_{i.title}',
+                'Полностью удалить работу': f'delete_{i.title}',
+                'Отправить в работу': f'send_{i.title}',
+            }, sizes=(2,1,1))
         )
     else:
         """
@@ -332,8 +367,8 @@ async def add_image(message: types.Message, state: FSMContext, session: AsyncSes
                 f'{i.title}\nСрок выполнения: {i.deadline}\nСсылка на файл: {i.file}\nСписок исполнителей\n{i.worker_name}',
                 reply_markup=get_callback_btns(btns={
                         'Назначить': f'appoint_{i.title}',
-                        'Удалить': f'delete_{i.title}',
                         'Изменить': f'change_{i.title}',
+                        'Полностью удалить работу': f'delete_{i.title}',
                     })
                 )
 
@@ -344,39 +379,6 @@ async def add_image(message: types.Message, state: FSMContext, session: AsyncSes
 @admin_router.message(CreateTask.image)
 async def add_image2(message: types.Message):
     await message.answer("Ввели данные неверно. Необходимо загрузить фото")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 #################################################################################################################
@@ -442,8 +444,9 @@ async def add_name(callback: types.CallbackQuery, state: FSMContext, session: As
         reply_markup=get_callback_btns(btns={
                 'Назначить': f'appoint_{i.title}',
                 'Изменить': f'change_{i.title}',
+                'Полностью удалить работу': f'delete_{i.title}',
                 'Отправить в работу': f'send_{i.title}',
-            })
+            }, sizes=(2,1,1))
         )
 
 

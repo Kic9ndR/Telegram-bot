@@ -17,7 +17,7 @@ user_router.message.filter(ChatFilter(["private"]))
 
 user_chat = os.getenv('USER_CHAT')
 admin_chat = os.getenv('ADMIN_CHAT')
-message_thread = 811            # Тестовое значение
+admin_message_thread = os.getenv('ADMIN_MESSAGE_THREAD')            # Тестовое значение
 # chat_id = -1002165307959
 # message_thread = 2
 
@@ -85,7 +85,7 @@ async def send_work(message: types.Message, bot:Bot, state: FSMContext, session:
     data = await state.get_data()
     await bot.send_message(chat_id=int(admin_chat), text=
                 f'Работа на проверку от @{message.from_user.username}\nКоментарий к работе: {data["comment"]}\n\nСсылка на работу:\n{message.text}',
-                message_thread_id=message_thread)
+                message_thread_id=int(admin_message_thread))
     await message.answer('Работа отправлена. Вы Молодец!', reply_markup=reply.start_kb)
     await state.clear()
     user = await orm_get_user(session, message.from_user.id)
@@ -118,7 +118,7 @@ async def about_cmd(message: types.Message):
 # ------------------------------------------------------------------------------------------------------
 @user_router.message(or_f(Command("timetable"), (F.text.lower() == "график работы 🗓")))
 async def nav_cal_handler(message: Message):
-    await message.answer(text="Таблица с графиком:\nhttps://docs.google.com/spreadsheets/d/1NQrStv45dgDhxkvkBrYvJfr2wfW3xBVDMqPZO44xQ3g/edit?gid=0#gid=0", reply_markup=reply.start_kb)
+    await message.answer(text="Таблица с графиком:\nhttps://docs.google.com/spreadsheets/d/1VTlLg0JOvnw-owN4xpzwl7Vl_5vtooEukcCH3phl6Nw/edit?gid=1574826567#gid=1574826567", reply_markup=reply.start_kb)
 
 
 
