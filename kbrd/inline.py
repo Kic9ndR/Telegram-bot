@@ -2,7 +2,7 @@ from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.orm_query import orm_get_user_info
+from database.orm_query import orm_get_users
 
 
 def get_callback_btns(
@@ -56,11 +56,11 @@ async def choise_worker_btns(
         sizes = (2,),
         ):
 
-    user_info = await orm_get_user_info(session)
+    user_info = await orm_get_users(session)
     keyboard = InlineKeyboardBuilder()
 
     for worker in user_info:
         keyboard.add(InlineKeyboardButton(text=
-                f'{worker.first_name}', callback_data=f"{worker.first_name} @{worker.username}"))
+                f'{worker.name}', callback_data=f"{worker.name} @{worker.username}"))
 
     return keyboard.adjust(*sizes).as_markup()    

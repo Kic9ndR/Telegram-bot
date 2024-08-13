@@ -2,6 +2,7 @@ from aiogram.types import (ReplyKeyboardMarkup, ReplyKeyboardRemove,
                             KeyboardButton)
 
 
+
 del_kb = ReplyKeyboardRemove()
 
 #----------------------------------------------------------------------------------
@@ -12,7 +13,7 @@ start_kb = ReplyKeyboardMarkup(
             KeyboardButton(text='Отправить работу 📧'),
         ],
         [
-            KeyboardButton(text='Архив работ 🗄️'),
+            KeyboardButton(text='Отчет о работе 💬'),
             KeyboardButton(text='О боте 🤖'),
         ],
         [
@@ -20,20 +21,20 @@ start_kb = ReplyKeyboardMarkup(
         ],
     ],
     resize_keyboard=True,
-    input_field_placeholder="Выберите нужный пункт:"
+    input_field_placeholder="Выберите нужный пункт:",
 )
 
 #----------------------------------------------------------------------------------
 admin_kb = ReplyKeyboardMarkup(
     keyboard=[
         [
-            KeyboardButton(text='Список сотрудников 📋'),
-            KeyboardButton(text='Таблица работ 𝄜'),
+            KeyboardButton(text='Списки сотрудников 📋'),
+            KeyboardButton(text='Таблицы 𝄜'),
 
         ],
         [
             KeyboardButton(text='Список работ 📜'),
-            KeyboardButton(text='В процессе создания 🔄'),
+            KeyboardButton(text='Архив 🗄️'),
         ],
         [
             KeyboardButton(text='Создание задачи ✍🏼'),
