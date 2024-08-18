@@ -1,6 +1,6 @@
 from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from database.models import AdminID, Archive, UserID, Work
+from database.models import AdminID, Archive, MessageSend, PublishedWorks, UserID, Work
 
     
 ############################################## Работа с админами ##############################################
@@ -242,3 +242,70 @@ async def orm_get_one_archive_work(session: AsyncSession, title):
     result = await session.execute(query)
     return result.scalar()
 
+
+############################################## Работа с id работ на проверку ##############################################
+
+async def orm_add_id_send_message(
+    session: AsyncSession,
+    id: int,
+    title: str,
+    user_id: int
+):
+    query = select(MessageSend).where(MessageSend.id == id)
+    result = await session.execute(query)
+    if result.first() is None:
+        session.add(
+            MessageSend(
+                id=id,
+                title=title,
+                user_id=user_id
+            )
+        )
+        await session.commit()
+
+
+async def orm_get_all_id_message(session: AsyncSession):
+    query = select(MessageSend)
+    result = await session.execute(query)
+    return result.scalars().all()
+
+
+async def orm_delete_id_message(session: AsyncSession, id: int):
+    query = delete(MessageSend).where(MessageSend.id == id)
+    await session.execute(query)
+    await session.commit()
+
+
+############################################## Работа с id отправленных работ ##############################################
+async def orm_add_id_send_work(
+    session: AsyncSession,
+    id: int,
+    title: str,
+):
+    query = select(PublishedWorks).where(PublishedWorks.id == id)
+    result = await session.execute(query)
+    if result.first() is None:
+        session.add(
+            PublishedWorks(
+                id=id,
+                title=title,
+            )
+        )
+        await session.commit()
+
+
+async def orm_get_all_id_send_work(session: AsyncSession):
+    query = select(PublishedWorks)
+    result = await session.execute(query)
+    return result.scalars().all()
+
+async def orm_get_id_send_work(session: AsyncSession, title):
+    query = select(PublishedWorks).where(PublishedWorks.title == title)
+    result = await session.execute(query)
+    return result.scalar()
+
+
+async def orm_delete_id_send_work(session: AsyncSession, id: int):
+    query = delete(PublishedWorks).where(PublishedWorks.id == id)
+    await session.execute(query)
+    await session.commit()

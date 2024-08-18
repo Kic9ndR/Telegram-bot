@@ -41,6 +41,7 @@ class AdminID(Base):
     name: Mapped[str] = mapped_column(String(150), nullable=False)
     username: Mapped[str] = mapped_column(String(150), nullable=False)
 
+
 ###################################################################################################################
 class Archive(Base):
     __tablename__ = 'archive'
@@ -52,3 +53,19 @@ class Archive(Base):
     worker_name: Mapped[str] = mapped_column(unique=False, nullable=True)
     image: Mapped[str] = mapped_column(String(150), unique=False, nullable=False)
     create_time: Mapped[DateTime] = mapped_column(DateTime, default=func.now())
+
+
+###################################################################################################################
+class MessageSend(Base):
+    __tablename__ = 'send message'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str] = mapped_column(String(150), unique=False, nullable=True)
+    user_id: Mapped[int] = mapped_column(unique=False, nullable=True)
+
+
+class PublishedWorks(Base):
+    __tablename__ = 'published works'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str] = mapped_column(String(150), unique=False, nullable=True)

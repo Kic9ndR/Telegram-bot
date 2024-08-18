@@ -51,7 +51,7 @@ def get_inlineMix_btns(
 
 
 
-async def choise_worker_btns(
+async def choice_worker_btns(
         session: AsyncSession,
         sizes = (2,),
         ):

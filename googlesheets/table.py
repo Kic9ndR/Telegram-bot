@@ -4,7 +4,7 @@ class GoogleTable:
     def __init__(
         self, 
         credence_service_file:str = "creds.json", 
-        googlesheet_file_url:str = "https://docs.google.com/spreadsheets/d/111DoQAlShuGQITdTBxwxFs1SLMcWPU0_6Q3pAjSdB0c"
+        googlesheet_file_url:str = "https://docs.google.com/spreadsheets/d/1NQrStv45dgDhxkvkBrYvJfr2wfW3xBVDMqPZO44xQ3g"
     ) -> None:
 
         self.credence_service_file = credence_service_file
@@ -24,9 +24,53 @@ class GoogleTable:
             service_file=self.credence_service_file
         )
 
-    def get_second_column(self):
+
+    def create_sheet(self, title: str):                                 # Создаю лист пользователя
         googlesheet_client = self._get_googlesheet_client()
-        sheets = googlesheet_client.open_by_url(self.googlesheet_file_url)
-        sheet = sheets.worksheet_by_title("Проверяющие")
-        data = sheet.get_all_values()
+        sheet = googlesheet_client.open_by_url(self.googlesheet_file_url)
+        src_worksheet = sheet.worksheet_by_title('Scheme')
+        return sheet.add_worksheet(title=title, rows=20, cols=10, src_worksheet=src_worksheet)
+    
+
+    def add_name(self, name: str, username: str):                                       # Добавление имени
+        googlesheet_client = self._get_googlesheet_client()
+        sheet = googlesheet_client.open_by_url(self.googlesheet_file_url)
+        worksheet = sheet.worksheet_by_title(name)
+        value = f'https://t.me/{username}'
+        add_name = worksheet.update_row(index=2, values=[name])
+        add_username = worksheet.update_row(index=2, values=[value], col_offset=2)
+        return add_name, add_username
+
+
+    def update_status(self, title: str, work: str, new_status: str):          # Обновляю статус работы
+        googlesheet_client = self._get_googlesheet_client()
+        sheet = googlesheet_client.open_by_url(self.googlesheet_file_url)
+        worksheet = sheet.worksheet_by_title(title)
+        for c in range(worksheet.rows):
+            cell = f'A{c + 1}'
+            work_name = worksheet.get_value(cell)
+            if work in work_name:
+                value = worksheet.get_value(f'F{c+1}')
+                print(value)
+                if value != '':
+                    count = int(value) + 1
+                else:
+                    count = 1
+                status = worksheet.update_value(f'B{c+1}' , new_status)
+                new_value = worksheet.update_value(f'F{c+1}', int(count))
+
+                return status, new_value
+
+    def add_info(self, name: str, data):                                                # Добавление информации в лист
+        googlesheet_client = self._get_googlesheet_client()
+        sheet = googlesheet_client.open_by_url(self.googlesheet_file_url)
+        worksheet = sheet.worksheet_by_title(name)
+        return worksheet.append_table(values=data, dimension='ROWS', overwrite=False)
+
+
+    def get_all_info(self, title: str):                                                 # Получаем всю информацию с листа в диапазоне data[-:-]
+        googlesheet_client = self._get_googlesheet_client()
+        sheet = googlesheet_client.open_by_url(self.googlesheet_file_url)
+        worksheet = sheet.worksheet_by_title(title)                                     # Название листа
+        data = worksheet.get_all_values()                                               # Диапазон чтения с листа
         return [row[6] for row in data[0:]]

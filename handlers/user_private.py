@@ -10,6 +10,7 @@ from aiogram.types import InputMediaPhoto, InputMedia, ContentType as CT
 
 
 from database.orm_query import *
+from googlesheets.table import GoogleTable
 from kbrd import reply
 from kbrd.inline import get_callback_btns
 
@@ -60,6 +61,13 @@ async def add_name(message: types.Message, session: AsyncSession, state: FSMCont
     await message.answer(f'Добавил Вас {user_name}, спасибо 😃', reply_markup=reply.start_kb)
     await state.clear()
 
+    google_table = GoogleTable()
+    google_table.create_sheet(user_name)
+
+    google_table.add_name(user_name, user.username)
+
+    await message.answer('Лист создан')
+
 
 #------------------------------------------------------------------------------------------------------
 @user_router.message(
@@ -92,14 +100,12 @@ class SendWork(StatesGroup):
     work = State()
 
 
-
 @user_router.message(
     or_f(Command("send work"), (F.text.lower() == "отправить работу 📧"))
 )
 async def send_work_cmd(message: types.Message, state: FSMContext):
     await message.answer("Оставь комментарий к работе", reply_markup=reply.send_work_kb)
     await state.set_state(SendWork.comment)
-
 
 
 @user_router.message(SendWork.comment, F.text)
@@ -110,11 +116,11 @@ async def send_work_comment(message: types.Message, state: FSMContext):
 
 
 @user_router.message(SendWork.work, F.text)
-async def send_work(message: types.Message, bot:Bot, state: FSMContext, session: AsyncSession):
+async def send_work(message: types.Message, bot: Bot, state: FSMContext, session: AsyncSession):
     await state.update_data(work=message.text)
     data = await state.get_data()
-    await bot.send_message(chat_id=int(admin_chat), text=
-                f'Работа на проверку от @{message.from_user.username}\nКоментарий к работе: {data["comment"]}\n\nСсылка на работу:\n{message.text}',
+    send_work = await bot.send_message(chat_id=int(admin_chat), text=
+                f'Работа на проверку от @{message.from_user.username}\nКомментарий к работе: {data["comment"]}\n\nСсылка на работу:\n{message.text}',
                 message_thread_id=int(admin_message_thread), reply_markup=get_callback_btns(btns={
                     'Принять работу': f"accept_{message.from_user.id}",
                     'Отправить правки': f"edits_{message.from_user.id}"
@@ -122,8 +128,15 @@ async def send_work(message: types.Message, bot:Bot, state: FSMContext, session:
             ), disable_web_page_preview=True
         )
     await message.answer('Работа отправлена. Вы Молодец!', reply_markup=reply.start_kb)
-    await state.clear()
     user = await orm_get_one_user(session, message.from_user.id)    # Получаю юзера
+    await orm_add_id_send_message(
+            session,
+            id=send_work.message_id,
+            title=user.current_work,
+            user_id=message.from_user.id,
+        )
+    
+    await state.clear()
     await orm_update_user_status(session, user.user_id, True)     # Изменение статуса проверки на "Проверка"
 
 
@@ -137,19 +150,29 @@ async def archive_cmd(message: types.Message, session: AsyncSession):
 
 
 # ------------------------------------------------------------------------------------------------------
-@user_router.message(or_f(Command("about"), (F.text.lower() == "О боте 🤖")))
-async def about_cmd(message: types.Message):
-    with open('user_about.md', 'r', encoding='utf-8') as user_list:
-        user_text = user_list.read()
-    await message.answer(text=(user_text), reply_markup=reply.start_kb)
+# @user_router.message(or_f(Command("about"), (F.text.lower() == "О боте 🤖")))
+# async def about_cmd(message: types.Message):
+#     with open('user_about.md', 'r', encoding='utf-8') as user_list:
+#         user_text = user_list.read()
+#     await message.answer(text=(user_text), reply_markup=reply.start_kb)
+
+@user_router.message(F.text.lower() == "хочу работу 🤑")
+async def want_to_work(message: types.Message, bot: Bot, session: AsyncSession):
+    user = await orm_get_one_user(session, message.from_user.id)
+    admin_list = [5825144544, 5624308044]
+    for i in admin_list:
+        await bot.send_sticker(chat_id=i, sticker='CAACAgIAAxkBAAEMqyFmwfdy_qInTrQUCKBThWOfILccdgACjjQAAgx6aEnXXlcFl6G7zTUE')
+        await bot.send_message(chat_id=i, text=f'{user.name} @{user.username} хочет поработать, нужно больше золота нужно построить зиккурат ')
+    await message.answer(text='Вас понял 🫡\nОтправил пожелание капитану', reply_markup=reply.start_kb)
 
 
 # ------------------------------------------------------------------------------------------------------
 @user_router.message(or_f(Command("timetable"), (F.text.lower() == "график работы 🗓")))
 async def nav_cal_handler(message: Message):
-    await message.answer(text="Таблица с графиком:\nhttps://docs.google.com/spreadsheets/d/1VTlLg0JOvnw-owN4xpzwl7Vl_5vtooEukcCH3phl6Nw/edit?gid=1574826567#gid=1574826567", reply_markup=reply.start_kb)
-
-
+    await message.answer(text=
+        "Таблица с графиком:\nhttps://docs.google.com/spreadsheets/d/1VTlLg0JOvnw-owN4xpzwl7Vl_5vtooEukcCH3phl6Nw/edit?gid=1574826567#gid=1574826567", 
+        reply_markup=reply.start_kb
+    )
 
 
 # ------------------------------------------------------------------------------------------------------
@@ -168,9 +191,6 @@ async def report_work_comment(message: types.Message, state: FSMContext):
     await state.update_data(comment=message.text)
     await message.answer("Приложи фото/видео к работе")
     await state.set_state(ReportWork.photo)
-    # data = await state.get_data()
-    # user_comment.append(data['comment'])
-    # await state.clear()
 
 #       |
 #       |
@@ -209,23 +229,6 @@ async def report_work_photo(message: types.Message, album: list[Message], bot: B
     await state.clear()
 
 
-# @user_router.message(ReportWork.photo, F.photo)
-# async def report_work_photo2(message: types.Message, bot: Bot, session: AsyncSession, state: FSMContext):
-#     user = await orm_get_one_user(session, message.from_user.id)
-#     data = await state.get_data()
-#     user_comment.append(data['comment'])
-
-#     comment = (''.join(user_comment))
-#     await bot.send_message(chat_id=int(admin_chat), text=
-#                     f'Работа от {user.name} @{user.username}\nКомментарий к работе:\n{comment}', 
-#                     message_thread_id=int(message_treads_for_check)
-#     )
-
-#     await bot.send_photo(chat_id=int(admin_chat), photo=message.photo[-1].file_id, message_thread_id=int(message_treads_for_check))
-#     await message.answer('Работа отправлена', reply_markup=reply.start_kb)
-#     await state.clear()
-
-
 @user_router.message(F.video)
 async def send_video(message: types.Message, bot: Bot, session: AsyncSession):
     user = await orm_get_one_user(session, message.from_user.id)
@@ -237,10 +240,6 @@ async def send_video(message: types.Message, bot: Bot, session: AsyncSession):
     )
     await bot.send_video(chat_id=int(admin_chat), video=message.video.file_id, message_thread_id=int(message_treads_for_check))
     await message.answer('Работа отправлена', reply_markup=reply.start_kb)
-
-
-
-
 
 
 

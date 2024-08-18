@@ -14,7 +14,7 @@ start_kb = ReplyKeyboardMarkup(
         ],
         [
             KeyboardButton(text='Отчет о работе 💬'),
-            KeyboardButton(text='О боте 🤖'),
+            KeyboardButton(text='Хочу работу 🤑'),
         ],
         [
             KeyboardButton(text='График работы 🗓'),
