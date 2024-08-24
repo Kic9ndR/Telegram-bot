@@ -58,7 +58,7 @@ async def add_admins(message: types.Message, bot: Bot, session: AsyncSession) ->
 
 ####################################################################################################################
 """
-Работа с отправленными работами=====================================================================================
+Взаимодействие с отправленными работами ============================================================================
 """
 ####################################################################################################################
 @user_group.callback_query(F.data.startswith('accept_'))
@@ -69,22 +69,27 @@ async def send_accepted_work(callback: types.CallbackQuery, bot: Bot, session: A
     await callback.message.reply("Отлично, работу принял")
 
     await bot.send_message(chat_id=user_info.user_id, text=f'Вашу работу <b>Приняли</b>!', parse_mode='HTML')
-    await orm_delete_user_work(session, user_id)
 
     # Редактирования сообщение в групповом чате
     for i in await orm_get_all_id_message(session):
         if int(user_id) == i.user_id:
-            await bot.edit_message_text(chat_id=int(admin_chat), message_id=i.id, text=f'Работу <b>Приняли</b> у @{user_info.username}')
-            await orm_delete_id_message(session, i.id)
+            await bot.edit_message_text(
+                chat_id=int(admin_chat), 
+                message_id=i.id, 
+                text=f'Работу <b>Приняли</b> у @{user_info.username}\n\nСсылка на отправленные файлы: {i.work_link}',
+                disable_web_page_preview=True,
+            )
+            await orm_delete_id_message(session, i.id)                 # Удаление id сообщения для редактирования 
+            await orm_delete_user_work(session, i.work_id)             # Удаление работы в назначенных работах пользователя
 
     # Отправка нового статуса в GoogleSheet
-    try:
-        user_name = await orm_get_one_user(session, user_id)
-        title = user_name.name          # Название листа
-        google_table = GoogleTable()
-        google_table.update_status(title=title, work=user_name.current_work, new_status="Выполнено")
-    except Exception as e:
-        callback.message.answer('Ошибка при добавлении пользователя в GoogleSheet', e)
+    # try:
+    #     user_name = await orm_get_one_user(session, user_id)
+    #     title = user_name.name          # Название листа
+    #     google_table = GoogleTable()
+    #     google_table.update_status(title=title, work=user_name.current_work, new_status="Выполнено")
+    # except Exception as e:
+    #     callback.message.answer('Ошибка при добавлении пользователя в GoogleSheet', e)
 
 
 ####################################################################################################################
@@ -139,17 +144,21 @@ async def add_doc(message: types.Message, bot: Bot, state: FSMContext, session: 
         await message.answer(text="Отправил правки", reply_to_message_id=SendWork.message_id)
     except Exception as e:
         print(e)
-        await message.answer(f"Ошибка.\n{e}\nОбратитесь к @Kic9ndr")
+        await message.answer(f"Ошибка при отправке правок сотруднику:\n{e}\nОбратись к @Kic9ndr")
 
     await state.clear()
-
 
 
     # Редактирования сообщение в групповом чате
     user_info = await orm_get_one_user(session, int(SendWork.user_id))
     for i in await orm_get_all_id_message(session):
         if int(SendWork.user_id) == i.user_id:
-            await bot.edit_message_text(chat_id=int(admin_chat), message_id=i.id, text=f'Отправлены <b>правки</b> по работе @{user_info.username}')
+            await bot.edit_message_text(
+                chat_id=int(admin_chat), 
+                message_id=i.id, 
+                text=f'Отправлены <b>правки</b> по работе @{user_info.username}\n\nСсылка на отправленные файлы: {i.work_link}',
+                disable_web_page_preview=True,
+            )
             await orm_delete_id_message(session, i.id)
 
     # Отправка нового статуса в GoogleSheet

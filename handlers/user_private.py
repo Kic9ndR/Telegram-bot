@@ -12,7 +12,7 @@ from aiogram.types import InputMediaPhoto, InputMedia, ContentType as CT
 from database.orm_query import *
 from googlesheets.table import GoogleTable
 from kbrd import reply
-from kbrd.inline import get_callback_btns
+from kbrd.inline import choice_work_btns, get_callback_btns
 
 
 user_router = Router()
@@ -27,6 +27,12 @@ user_comment = []
 
 class AddName(StatesGroup):
     name = State()
+    payment_details = State()
+    work_programs = State()
+    residence_city = State()
+
+    programs = []
+    mes_id = None
 
 
 @user_router.message(
@@ -40,71 +46,201 @@ async def start_cmd(message: types.Message, session: AsyncSession, state: FSMCon
 
     if user is None:
         await state.set_state(AddName.name)
-        await message.answer('Пожалуйста, введите имя и фамилию', reply_markup=reply.start_kb)
+        await message.answer('Пожалуйста, введите имя и фамилию', reply_markup=reply.del_kb)
+    elif (user.payment_details) is None:
+        await state.set_state(AddName.payment_details)
+        await message.answer('Введите номер телефона и банк для перевода:', reply_markup=reply.del_kb)
     else:
         await message.answer("Что интересует?", reply_markup=reply.start_kb)
 
 
+
 @user_router.message(AddName.name, F.text)
-async def add_name(message: types.Message, session: AsyncSession, state: FSMContext):
+async def add_name(message: types.Message, state: FSMContext):
     await state.update_data(name=message.text)
+    await message.answer('Введите номер телефона и банк для перевода:', reply_markup=reply.del_kb)
+    await state.set_state(AddName.payment_details)
+
+
+@user_router.message(AddName.payment_details, F.text)
+async def add_payment(message: types.Message, state: FSMContext):
+    await state.update_data(payment_details=message.text)
+    await message.answer('Выбери программы в которых работаешь:', reply_markup=get_callback_btns(
+        btns={
+            'Maya': f'Maya',
+            '3DMax': f'3DMax',
+            'Blender': f'Blender',
+            '❌ Отменить': f'Cancel',
+            'Продолжить ➡️': f'Continue',
+        }, sizes=(2,1,2))
+    )
+
+
+########################################################################################################################
+"""
+Выбор программы для работы
+"""
+@user_router.callback_query(F.data.startswith('Maya'))
+async def maya_prog(callback: types.CallbackQuery, bot: Bot, state: FSMContext):
+    await callback.answer('Добавил в список "Maya"')
+    title = callback.data
+    print(title)
+    AddName.programs.append(title)
+
+
+@user_router.callback_query(F.data.startswith('3DMax'))
+async def three_d_max_prog(callback: types.CallbackQuery, bot: Bot, state: FSMContext):
+    await callback.answer('Добавил в список "3DMax"')
+    title = callback.data
+    print(title)
+    AddName.programs.append(title)
+
+
+@user_router.callback_query(F.data.startswith('Blender'))
+async def blender_prog(callback: types.CallbackQuery, bot: Bot, state: FSMContext):
+    await callback.answer('Добавил в список "Blender"')
+    title = callback.data
+    print(title)
+    AddName.programs.append(title)
+
+@user_router.callback_query(F.data.startswith('Cancel'))
+async def cancel_prog(callback: types.CallbackQuery, state: FSMContext, bot: Bot):
+    await callback.answer('Отменил выбор')
+    current_state = await state.get_state()
+
+    AddName.programs = []
+    previous = None
+    for step in AddName.__all_states__:
+        if step.state == current_state:
+            await state.set_state(previous)
+            await callback.message.answer(f"Хорошо, введите снова\nВведите программы повторно")
+            return
+        previous = step
+
+
+########################################################################################################################
+
+@user_router.callback_query(F.data.startswith('Continue'))
+async def add_programs(callback: types.CallbackQuery, state: FSMContext):
+    await state.update_data(work_programs=AddName.programs)
+    await callback.answer('Добавил программ(у/ы)')
+    await callback.message.answer('Напиши город проживания')
+    await state.set_state(AddName.residence_city)
+
+
+@user_router.message(AddName.residence_city, F.text)
+async def add_city(message: types.Message, state: FSMContext, session: AsyncSession, bot: Bot):
+    await state.update_data(residence_city=message.text)
     data = await state.get_data()
     user = message.from_user
-    user_name = data['name']
-    await orm_add_user(
-        session, 
-        user_id = user.id,
-        name = user_name,
-        username = user.username,
-        )
+    programs = ''
+    google_table = GoogleTable()                        # Создается лист в google sheets
+
+    for i in (AddName.programs):
+        print(i)
+        programs += f"{i}, "
+
+    await bot.send_chat_action(chat_id = user.id, action="typing")
+    try:
+        orm_user = await orm_get_one_user(session, user.id)
+        if orm_user is None:
+            user_name = data['name']
+            await orm_add_user(
+                session, 
+                user_id = user.id,
+                name = user_name,
+                username = user.username,
+                payment_details = data['payment_details'],
+                work_programs = programs,
+                residence_city = data['residence_city'],
+                )
+            
+            google_table.create_sheet(user_name)
+            google_table.add_name(user_name, user.username)
+            google_table.add_user_info(user_name, data['payment_details'], programs, data['residence_city'])
+        else:
+            user_name = orm_user.name
+            await orm_add_user_data(
+                session, 
+                user_id = user.id,
+                payment_details = data['payment_details'],
+                work_programs = programs,
+                residence_city = data['residence_city'],
+                )
+            google_table.add_user_info(user_name, data['payment_details'], programs, data['residence_city'])
+    except Exception as e:
+        await message.answer(f'Ошибка: {e}\nОбратитесь к @Kic9ndr')
     
-    await message.answer(f'Добавил Вас {user_name}, спасибо 😃', reply_markup=reply.start_kb)
     await state.clear()
 
-    google_table = GoogleTable()
-    google_table.create_sheet(user_name)
-
-    google_table.add_name(user_name, user.username)
-
-    await message.answer('Лист создан')
+    AddName.programs = []
+    await message.answer(f'Добавил твои данные, {user_name}, спасибо 😃', reply_markup=reply.start_kb)
 
 
-#------------------------------------------------------------------------------------------------------
+#####################################################################################################################################################
 @user_router.message(
     or_f(Command("current_work"), (F.text.lower() == "текущая работа ⏱"))
 )
-async def current_work_cmd(message: types.Message, session: AsyncSession, bot: Bot):
+async def current_work_cmd(message: types.Message, session: AsyncSession):
+    """
+    Отправка текущей работы сотруднику
+    """
     user_id = message.from_user.id
-    user = await orm_get_one_user(session, user_id)
+    user_work = await orm_get_user_work(session, user_id)
 
-    work = await orm_get_one_work(session, user.current_work)
-    if work is None:
-        await message.answer("У тебя нет текущей работы")
-        return
-    else:
-        task = work.worker_name.split("-")[0]
     try:
-        if user.current_work == None:
+        if user_work is None:
             await message.answer("У тебя нет текущей работы")
+            return
         else:
-            await message.answer_photo(photo=work.image, caption=
-                        f'<b>Работа</b> - {work.title}\n<b>Срок выполнения:</b> {work.deadline}\n<b>Ссылка на файл:</b> <a href="{work.file}"> Work Files </a>\n<b>Оклад за работу:</b> {user.salary}\n<b>Твоя задача:</b> {task}',
-                        parse_mode='HTML')
+            for all_works in await orm_get_user_works(session):
+                if all_works.user_id == user_id:
+                    work = await orm_get_one_work(session, all_works.current_work)
+                    await message.answer_photo(
+                        photo=work.image, 
+                        caption=
+                        f'<b>Работа</b> - {work.title}\n<b>Срок выполнения:</b> {work.deadline}\n<b>Ссылка на файл:</b> <a href="{work.file}"> Work Files </a>\n<b>Оклад за работу:</b> {all_works.salary}\n<b>Твоя задача:</b> {all_works.task}',
+                        parse_mode='HTML'
+                    )
     except Exception as e:
-        await message.answer(f'Ошибка:\n{e}\n\nНапишите програмёру @Kic9ndr', reply_markup=reply.start_kb)
+        await message.answer(f'Ошибка вывода работы сотрудников:\n{e}\n\nНапишите @Kic9ndr', reply_markup=reply.start_kb)
 
 
-# #----------------------------------------------------------------------------------------------------
+#####################################################################################################################################################
 class SendWork(StatesGroup):
+    """
+    FSM для отправки работы на проверку
+    """
+    choice_work = State()
     comment = State()
     work = State()
+
+    work_id = ''
 
 
 @user_router.message(
     or_f(Command("send work"), (F.text.lower() == "отправить работу 📧"))
 )
-async def send_work_cmd(message: types.Message, state: FSMContext):
-    await message.answer("Оставь комментарий к работе", reply_markup=reply.send_work_kb)
+async def work_btns(message: types.Message, state: FSMContext, session: AsyncSession):
+    """
+    Вывод клавиатуры для выбора работы
+    """
+    await message.answer("Выбери какую работу из списка отправить на проверку:", reply_markup = await choice_work_btns(session, user_id=message.from_user.id))
+    await state.set_state(SendWork.choice_work)
+
+
+@user_router.callback_query(SendWork.choice_work, F.data)
+async def send_work_cmd(callback: types.CallbackQuery, state: FSMContext):
+    """
+    Выбор работы и запись данных с нее
+    """
+    await callback.answer()
+    title = callback.data.split("_")[0]
+    work_id = callback.data.split("_")[-1]
+    SendWork.work_id = work_id
+
+    await state.update_data(choice_work=title)
+    await callback.message.answer("Оставь комментарий к работе", reply_markup=reply.send_work_kb)
     await state.set_state(SendWork.comment)
 
 
@@ -129,39 +265,47 @@ async def send_work(message: types.Message, bot: Bot, state: FSMContext, session
         )
     await message.answer('Работа отправлена. Вы Молодец!', reply_markup=reply.start_kb)
     user = await orm_get_one_user(session, message.from_user.id)    # Получаю юзера
+    work_id = SendWork.work_id
     await orm_add_id_send_message(
             session,
             id=send_work.message_id,
-            title=user.current_work,
+            title=data['choice_work'],
             user_id=message.from_user.id,
+            work_link=message.text,
+            work_id=work_id
         )
     
     await state.clear()
     await orm_update_user_status(session, user.user_id, True)     # Изменение статуса проверки на "Проверка"
 
 
-# ------------------------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------------------------
 @user_router.message(or_f(Command("archive"), (F.text.lower() == "архивные работы 🗄️")))
-async def archive_cmd(message: types.Message, session: AsyncSession):
-    i = await orm_get_archive_works(session)
-    await message.answer_photo(photo=i.image, caption=
-            f'{i.title}\nСрок выполнения: {i.deadline}\nСсылка на файл: <a href="{i.file}"> Work Files </a>\nСписок исполнителей\n{i.worker_name}'
-    )
+async def archive_cmd(message: types.Message, session: AsyncSession, bot: Bot):
+    user = await orm_get_one_user(session, message.from_user.id)
+    google_table = GoogleTable()
+    link = google_table.get_link_worker(user.name)
+
+    await bot.send_chat_action(chat_id = user.user_id, action="typing")
+    await message.answer('Архивные работы:')
+    for archive_work in await orm_get_archive_works(session):
+        if user.name in archive_work.worker_name:
+            await message.answer_photo(
+                photo=archive_work.image, 
+                caption=        # Отправка архивной работы и ссылка на гугл таблицу
+                f'<b>Название работы:</b> {archive_work.title}\n<b>Срок выполнения:</b> {archive_work.deadline}\n<b>Ссылка на файл:</b> <a href="{archive_work.file}"> Work Files </a>\n\n<i>Для получения информации о оплате и стоимости задачи:</i>\n<a href="{link}">Ссылка на GoogleTable</a>'
+            )
+    else:
+        await message.answer('Архивных работы кончились :( ')
 
 
-# ------------------------------------------------------------------------------------------------------
-# @user_router.message(or_f(Command("about"), (F.text.lower() == "О боте 🤖")))
-# async def about_cmd(message: types.Message):
-#     with open('user_about.md', 'r', encoding='utf-8') as user_list:
-#         user_text = user_list.read()
-#     await message.answer(text=(user_text), reply_markup=reply.start_kb)
-
+#-------------------------------------------------------------------------------------------------------
 @user_router.message(F.text.lower() == "хочу работу 🤑")
 async def want_to_work(message: types.Message, bot: Bot, session: AsyncSession):
     user = await orm_get_one_user(session, message.from_user.id)
     admin_list = [5825144544, 5624308044]
     for i in admin_list:
-        await bot.send_sticker(chat_id=i, sticker='CAACAgIAAxkBAAEMqyFmwfdy_qInTrQUCKBThWOfILccdgACjjQAAgx6aEnXXlcFl6G7zTUE')
+        await bot.send_sticker(chat_id=i, sticker='CAACAgIAAxkBAAEMsoVmydWYfGwFoazZb8ffbF3D29zF-AACIwADX93LNgABGL7i461AdjUE')
         await bot.send_message(chat_id=i, text=f'{user.name} @{user.username} хочет поработать, нужно больше золота нужно построить зиккурат ')
     await message.answer(text='Вас понял 🫡\nОтправил пожелание капитану', reply_markup=reply.start_kb)
 
@@ -175,7 +319,8 @@ async def nav_cal_handler(message: Message):
     )
 
 
-# ------------------------------------------------------------------------------------------------------
+########################################################################################################
+
 class ReportWork(StatesGroup):
     comment = State()
     photo = State()
@@ -222,8 +367,6 @@ async def report_work_photo(message: types.Message, album: list[Message], bot: B
             file_id = obj_dict[msg.content_type]['file_id']
             media_group.append(InputMedia(media=file_id))
 
-
-
     await bot.send_media_group(chat_id=int(admin_chat), media=media_group, message_thread_id=int(message_treads_for_check))
     await message.answer('Работа отправлена', reply_markup=reply.start_kb)
     await state.clear()
@@ -242,7 +385,13 @@ async def send_video(message: types.Message, bot: Bot, session: AsyncSession):
     await message.answer('Работа отправлена', reply_markup=reply.start_kb)
 
 
+# Информация о боте и как им пользоваться
 
+# @user_router.message(or_f(Command("about"), (F.text.lower() == "О боте 🤖")))
+# async def about_cmd(message: types.Message):
+#     with open('user_about.md', 'r', encoding='utf-8') as user_list:
+#         user_text = user_list.read()
+#     await message.answer(text=(user_text), reply_markup=reply.start_kb)
 
 
 """

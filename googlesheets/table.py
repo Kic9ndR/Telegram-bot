@@ -25,7 +25,7 @@ class GoogleTable:
         )
 
 
-    def create_sheet(self, title: str):                                 # Создаю лист пользователя
+    def create_sheet(self, title: str):                                                 # Создаю лист пользователя
         googlesheet_client = self._get_googlesheet_client()
         sheet = googlesheet_client.open_by_url(self.googlesheet_file_url)
         src_worksheet = sheet.worksheet_by_title('Scheme')
@@ -38,11 +38,11 @@ class GoogleTable:
         worksheet = sheet.worksheet_by_title(name)
         value = f'https://t.me/{username}'
         add_name = worksheet.update_row(index=2, values=[name])
-        add_username = worksheet.update_row(index=2, values=[value], col_offset=2)
+        add_username = worksheet.update_row(index=2, values=[value], col_offset=3)
         return add_name, add_username
 
 
-    def update_status(self, title: str, work: str, new_status: str):          # Обновляю статус работы
+    def update_status(self, title: str, work: str, new_status: str):                    # Обновляю статус работы
         googlesheet_client = self._get_googlesheet_client()
         sheet = googlesheet_client.open_by_url(self.googlesheet_file_url)
         worksheet = sheet.worksheet_by_title(title)
@@ -56,16 +56,32 @@ class GoogleTable:
                     count = int(value) + 1
                 else:
                     count = 1
-                status = worksheet.update_value(f'B{c+1}' , new_status)
-                new_value = worksheet.update_value(f'F{c+1}', int(count))
-
+                status = worksheet.update_value(f'C{c+1}' , new_status)
+                new_value = worksheet.update_value(f'G{c+1}', int(count))
                 return status, new_value
 
-    def add_info(self, name: str, data):                                                # Добавление информации в лист
+
+    # def add_sheet(self, name: str, data):                                                # Создание листа и добавление информации на него
+    #     googlesheet_client = self._get_googlesheet_client()
+    #     sheet = googlesheet_client.open_by_url(self.googlesheet_file_url)
+    #     worksheet = sheet.worksheet_by_title(name)
+    #     return worksheet.append_table(values=data, dimension='ROWS', overwrite=False)
+    
+
+    def add_user_info(                                                          # Добавляется информация о реквизитах, программах и городе сотрудника 
+            self,
+            title: str,
+            payment_details: str,
+            work_programs: str,
+            residence_city: str,
+    ):
         googlesheet_client = self._get_googlesheet_client()
         sheet = googlesheet_client.open_by_url(self.googlesheet_file_url)
-        worksheet = sheet.worksheet_by_title(name)
-        return worksheet.append_table(values=data, dimension='ROWS', overwrite=False)
+        worksheet = sheet.worksheet_by_title(title)
+        payment = worksheet.update_value('H2', payment_details)
+        programs = worksheet.update_value('I2', work_programs)
+        city = worksheet.update_value('J2', residence_city)
+        return payment, programs, city
 
 
     def get_all_info(self, title: str):                                                 # Получаем всю информацию с листа в диапазоне data[-:-]
@@ -74,3 +90,11 @@ class GoogleTable:
         worksheet = sheet.worksheet_by_title(title)                                     # Название листа
         data = worksheet.get_all_values()                                               # Диапазон чтения с листа
         return [row[6] for row in data[0:]]
+    
+    
+    def get_link_worker(self, title: str):                                              # Ссылка на лист сотрудника
+        googlesheet_client = self._get_googlesheet_client()
+        sheet = googlesheet_client.open_by_url(self.googlesheet_file_url)
+        worksheet = sheet.worksheet_by_title(title)
+        url = "https://docs.google.com/spreadsheets/d/"+ str(sheet.id) +"/edit#gid="+ str(worksheet.id)
+        return url

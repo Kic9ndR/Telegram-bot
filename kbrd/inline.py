@@ -2,7 +2,7 @@ from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.orm_query import orm_get_users
+from database.orm_query import orm_get_user_works, orm_get_users
 
 
 def get_callback_btns(
@@ -63,4 +63,26 @@ async def choice_worker_btns(
         keyboard.add(InlineKeyboardButton(text=
                 f'{worker.name}', callback_data=f"{worker.name} @{worker.username}"))
 
-    return keyboard.adjust(*sizes).as_markup()    
+    return keyboard.adjust(*sizes).as_markup()
+
+
+async def choice_work_btns(
+        session: AsyncSession,
+        user_id: int,
+        sizes = (2,),
+        ):
+
+    keyboard = InlineKeyboardBuilder()
+    works = await orm_get_user_works(session)
+
+    for work in works:
+        if int(work.user_id) == int(user_id):
+            keyboard.add(InlineKeyboardButton(text=
+                    f'{work.current_work}', callback_data=f"{work.current_work}_{work.work_id}")
+            )
+    else:
+        keyboard.add(InlineKeyboardButton(text=
+                f'Сами разберутся', callback_data=f"nothing_")
+        )
+
+    return keyboard.adjust(*sizes).as_markup()

@@ -1,6 +1,5 @@
 from sqlalchemy import DateTime, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship, DeclarativeBase
-from sqlalchemy.ext.declarative import declarative_base
 
 
 class Base(DeclarativeBase):
@@ -28,9 +27,26 @@ class UserID(Base):
     user_id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(150), nullable=False)
     username: Mapped[str] = mapped_column(String(150), nullable=False)
-    current_work: Mapped[str] = mapped_column(String(150), nullable=True)
-    salary: Mapped[int] = mapped_column(String(150), nullable=True)
-    check_work: Mapped[bool] = mapped_column(nullable=True)
+    payment_details: Mapped[str] = mapped_column(String(50), nullable=True)
+    work_programs: Mapped[str] = mapped_column(String(50), nullable=True)
+    residence_city: Mapped[str] = mapped_column(String(50), nullable=True)
+
+    work: Mapped[list["UserWork"]] = relationship(back_populates="user")
+
+
+###################################################################################################################
+
+class UserWork(Base):
+    __tablename__ = 'user work' 
+
+    work_id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("user_id.user_id", ondelete="CASCADE"))
+    current_work: Mapped[str] = mapped_column(String(150), unique=False)
+    task: Mapped[str] = mapped_column(String(150), unique=False)
+    salary: Mapped[int] = mapped_column(String(150), unique=False)
+    check_work: Mapped[bool] = mapped_column(unique=False)
+    
+    user: Mapped["UserID"] = relationship(back_populates="work")
 
 
 ###################################################################################################################
@@ -56,13 +72,18 @@ class Archive(Base):
 
 
 ###################################################################################################################
+
 class MessageSend(Base):
     __tablename__ = 'send message'
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    title: Mapped[str] = mapped_column(String(150), unique=False, nullable=True)
-    user_id: Mapped[int] = mapped_column(unique=False, nullable=True)
+    title: Mapped[str] = mapped_column(String(50), unique=False, nullable=True)
+    user_id: Mapped[int] = mapped_column(unique=False, nullable=False)
+    work_link: Mapped[str] = mapped_column(unique=False, nullable=False)
+    work_id: Mapped[int] = mapped_column(unique=True, nullable=True)
 
+
+###################################################################################################################
 
 class PublishedWorks(Base):
     __tablename__ = 'published works'

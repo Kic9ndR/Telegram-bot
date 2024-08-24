@@ -1,6 +1,7 @@
 from sqlalchemy import select, update, delete
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
-from database.models import AdminID, Archive, MessageSend, PublishedWorks, UserID, Work
+from database.models import *
 
     
 ############################################## Работа с админами ##############################################
@@ -43,7 +44,13 @@ async def orm_add_user(
     user_id: int,
     name: str,
     username: str,
+    payment_details: str,
+    work_programs: str,
+    residence_city: str,
 ):
+    """
+    Добавление карточки сотрудника
+    """
     query = select(UserID).where(UserID.user_id == user_id)
     result = await session.execute(query)
     if result.first() is None:
@@ -52,12 +59,40 @@ async def orm_add_user(
                 user_id=user_id, 
                 name=name, 
                 username=username,
+                payment_details = payment_details,
+                work_programs=work_programs,
+                residence_city=residence_city,
                 )
         )
         await session.commit()
 
+async def orm_add_user_data(
+        session: AsyncSession,
+        user_id: int,
+        payment_details: str,
+        work_programs: str,
+        residence_city: str,
+    ):
+    query = (
+        update(UserID)
+        .where(UserID.user_id == user_id)
+        .values( 
+            payment_details=payment_details,
+            work_programs=work_programs,
+            residence_city=residence_city
+        )
+    )
+    await session.execute(query)
+    await session.commit()
+
 async def orm_get_users(session: AsyncSession):
     query = select(UserID)
+    result = await session.execute(query)
+    return result.scalars().all()
+
+
+async def orm_get_users_works(session: AsyncSession):
+    query = select(UserID).options(selectinload(UserID.work))
     result = await session.execute(query)
     return result.scalars().all()
 
@@ -67,49 +102,64 @@ async def orm_get_one_user(session: AsyncSession, user_id):
     result = await session.execute(query)
     return result.scalar()
 
+
+############################################## Взаимодействие с работами сотрудников ##############################################
+
+async def orm_add_user_work(
+    session: AsyncSession,
+    user_id: int,
+    current_work: str,
+    task: str,
+    salary: int,
+    check_work: bool,
+):
+    """
+    Добавление работы
+    """
+    query = select(UserWork).where(UserWork.current_work == current_work)
+    await session.execute(query)
+    session.add(
+        UserWork(
+            user_id=user_id,
+            current_work=current_work, 
+            task=task,
+            salary=salary, 
+            check_work=check_work,
+            )
+    )
+    await session.commit()
+
+
+async def orm_get_user_works(session: AsyncSession):
+    query = select(UserWork)
+    result = await session.execute(query)
+    return result.scalars().all()
+
+
+async def orm_get_user_work(session: AsyncSession, user_id: int):
+    query = select(UserWork).where(UserWork.user_id == user_id)
+    result = await session.execute(query)
+    return result.scalar()
+
+
 async def orm_update_user_status(session: AsyncSession, user_id: int, new_value: str):
     query = (
-        update(UserID)
-        .where(UserID.user_id == user_id)
+        update(UserWork)
+        .where(UserWork.user_id == user_id)
         .values(check_work=new_value)
     )
     await session.execute(query)
     await session.commit()
 
 
-async def orm_update_user_work(
-        session: AsyncSession, 
-        user_id: int, 
-        current_work: str,
-        salary: int,
-        check_work: bool,
-):
-    query  = (
-        update(UserID)
-        .where(UserID.user_id == user_id)
-        .values(current_work=current_work,
-                salary=salary,
-                check_work=check_work
-                )
+async def orm_delete_user_work(session: AsyncSession, work_id: int):
+    query = (
+        delete(UserWork).
+        where(UserWork.work_id == work_id)
     )
     await session.execute(query)
     await session.commit()
 
-
-async def orm_delete_user_work(
-        session: AsyncSession, 
-        user_id: int,
-):
-    query  = (
-        update(UserID)
-        .where(UserID.user_id == user_id)
-        .values(current_work=None,
-                salary=None,
-                check_work=False
-                )
-    )
-    await session.execute(query)
-    await session.commit()
 
 ############################################## Добавление работы ##############################################
 
@@ -181,7 +231,6 @@ async def orm_add_work_worker_name(session: AsyncSession, title: str, new_value:
     await session.commit()
 
 
-
 async def orm_update_work(session: AsyncSession, title: str, data: dict):
     query = (
         update(Work)
@@ -249,19 +298,22 @@ async def orm_add_id_send_message(
     session: AsyncSession,
     id: int,
     title: str,
-    user_id: int
+    user_id: int,
+    work_link: str,
+    work_id: int,
 ):
     query = select(MessageSend).where(MessageSend.id == id)
-    result = await session.execute(query)
-    if result.first() is None:
-        session.add(
-            MessageSend(
-                id=id,
-                title=title,
-                user_id=user_id
-            )
+    await session.execute(query)
+    session.add(
+        MessageSend(
+            id=id,
+            title=title,
+            user_id=user_id,
+            work_link=work_link,
+            work_id=work_id
         )
-        await session.commit()
+    )
+    await session.commit()
 
 
 async def orm_get_all_id_message(session: AsyncSession):
