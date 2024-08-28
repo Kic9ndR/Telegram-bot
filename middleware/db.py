@@ -24,7 +24,6 @@ class AddAdmins(BaseMiddleware):
     def __init__(self, session: AsyncSession):
         self.session = session
 
-
     async def __call__(
         self,
         handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]],

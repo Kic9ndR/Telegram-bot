@@ -166,6 +166,7 @@ async def orm_delete_user_work(session: AsyncSession, work_id: int):
 async def orm_add_work(
     session: AsyncSession,
     title: str,
+    work_comment: str,
     deadline: int,
     file_name: str,
     file: str,
@@ -179,6 +180,7 @@ async def orm_add_work(
         session.add(
             Work(
                 title=title,
+                work_comment=work_comment,
                 deadline=deadline,
                 file_name=file_name,
                 file=file,
@@ -191,6 +193,18 @@ async def orm_add_work(
 
 async def orm_get_works(session: AsyncSession):
     query = select(Work)
+    result = await session.execute(query)
+    return result.scalars().all()
+
+
+async def orm_get_works_not_publish(session: AsyncSession):
+    query = select(Work).where(Work.ready_status == False)
+    result = await session.execute(query)
+    return result.scalars().all()
+
+
+async def orm_get_works_publish(session: AsyncSession):
+    query = select(Work).where(Work.ready_status == True)
     result = await session.execute(query)
     return result.scalars().all()
 
@@ -247,12 +261,20 @@ async def orm_update_work(session: AsyncSession, title: str, data: dict):
     await session.commit()
 
 
-
 async def orm_delete_work(session: AsyncSession, title: str):
     query = delete(Work).where(Work.title == title)
     await session.execute(query)
     await session.commit()
 
+
+async def orm_delete_worker_name(session: AsyncSession, title: str):
+    query = (
+        update(Work)
+        .where(Work.title == title)
+        .values(worker_name=None)
+    )
+    await session.execute(query)
+    await session.commit()
 
 ############################################## Работа с архивом ##############################################
 

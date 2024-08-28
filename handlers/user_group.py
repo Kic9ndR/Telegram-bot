@@ -19,8 +19,6 @@ user_group.message.filter(ChatFilter(['group', 'supergroup']))
 user_chat = os.getenv('USER_CHAT')
 admin_chat = os.getenv('ADMIN_CHAT')
 admin_message_thread = os.getenv('ADMIN_MESSAGE_THREAD')
-# chat_id = -1002165307959
-# message_thread = 2
 
 
 @user_group.message(Command("add_admin"))
@@ -76,20 +74,20 @@ async def send_accepted_work(callback: types.CallbackQuery, bot: Bot, session: A
             await bot.edit_message_text(
                 chat_id=int(admin_chat), 
                 message_id=i.id, 
-                text=f'Работу <b>Приняли</b> у @{user_info.username}\n\nСсылка на отправленные файлы: {i.work_link}',
+                text=f'Работу <i>{i.title}</i> <b>Приняли</b> у @{user_info.username}\n\nСсылка на отправленные файлы: {i.work_link}',
                 disable_web_page_preview=True,
             )
             await orm_delete_id_message(session, i.id)                 # Удаление id сообщения для редактирования 
             await orm_delete_user_work(session, i.work_id)             # Удаление работы в назначенных работах пользователя
 
     # Отправка нового статуса в GoogleSheet
-    # try:
-    #     user_name = await orm_get_one_user(session, user_id)
-    #     title = user_name.name          # Название листа
-    #     google_table = GoogleTable()
-    #     google_table.update_status(title=title, work=user_name.current_work, new_status="Выполнено")
-    # except Exception as e:
-    #     callback.message.answer('Ошибка при добавлении пользователя в GoogleSheet', e)
+    try:
+        user_name = await orm_get_one_user(session, user_id)
+        title = user_name.name          # Название листа
+        google_table = GoogleTable()
+        google_table.update_status(title=title, work=user_name.current_work, new_status="Выполнено")
+    except Exception as e:
+        callback.message.answer('Ошибка при добавлении пользователя в GoogleSheet', e)
 
 
 ####################################################################################################################
@@ -156,7 +154,7 @@ async def add_doc(message: types.Message, bot: Bot, state: FSMContext, session: 
             await bot.edit_message_text(
                 chat_id=int(admin_chat), 
                 message_id=i.id, 
-                text=f'Отправлены <b>правки</b> по работе @{user_info.username}\n\nСсылка на отправленные файлы: {i.work_link}',
+                text=f'Отправлены <b>правки</b> по работе <i>{i.title}</i> к @{user_info.username}\n\nСсылка на отправленные файлы: {i.work_link}',
                 disable_web_page_preview=True,
             )
             await orm_delete_id_message(session, i.id)

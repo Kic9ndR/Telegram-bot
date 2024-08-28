@@ -61,12 +61,12 @@ class GoogleTable:
                 return status, new_value
 
 
-    # def add_sheet(self, name: str, data):                                                # Создание листа и добавление информации на него
-    #     googlesheet_client = self._get_googlesheet_client()
-    #     sheet = googlesheet_client.open_by_url(self.googlesheet_file_url)
-    #     worksheet = sheet.worksheet_by_title(name)
-    #     return worksheet.append_table(values=data, dimension='ROWS', overwrite=False)
-    
+    def add_user_work(self, name: str, data):                                    # Добавление работы сотруднику
+        googlesheet_client = self._get_googlesheet_client()
+        sheet = googlesheet_client.open_by_url(self.googlesheet_file_url)
+        worksheet = sheet.worksheet_by_title(name)
+        return worksheet.append_table(values=data, dimension='ROWS', overwrite=False)
+
 
     def add_user_info(                                                          # Добавляется информация о реквизитах, программах и городе сотрудника 
             self,

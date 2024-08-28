@@ -199,7 +199,7 @@ async def current_work_cmd(message: types.Message, session: AsyncSession):
                     await message.answer_photo(
                         photo=work.image, 
                         caption=
-                        f'<b>Работа</b> - {work.title}\n<b>Срок выполнения:</b> {work.deadline}\n<b>Ссылка на файл:</b> <a href="{work.file}"> Work Files </a>\n<b>Оклад за работу:</b> {all_works.salary}\n<b>Твоя задача:</b> {all_works.task}',
+                        f'<b>Работа</b> - {work.title}\n<b>Комментарий:</b> {work.work_comment}\n<b>Срок выполнения:</b> {work.deadline}\n<b>Ссылка на файл:</b> <a href="{work.file}"> Work Files </a>\n<b>Оклад за работу:</b> {all_works.salary}\n<b>Твоя задача:</b> {all_works.task}',
                         parse_mode='HTML'
                     )
     except Exception as e:
@@ -255,8 +255,10 @@ async def send_work_comment(message: types.Message, state: FSMContext):
 async def send_work(message: types.Message, bot: Bot, state: FSMContext, session: AsyncSession):
     await state.update_data(work=message.text)
     data = await state.get_data()
+    work_title = data['choice_work']                        # Название отправляемой работы
+    comment = data["comment"]                               # Комментарий к работе
     send_work = await bot.send_message(chat_id=int(admin_chat), text=
-                f'Работа на проверку от @{message.from_user.username}\nКомментарий к работе: {data["comment"]}\n\nСсылка на работу:\n{message.text}',
+                f'Работа <i>{work_title}</i> на проверку от @{message.from_user.username}\nКомментарий к работе: {comment}\n\nСсылка на работу:\n{message.text}',
                 message_thread_id=int(admin_message_thread), reply_markup=get_callback_btns(btns={
                     'Принять работу': f"accept_{message.from_user.id}",
                     'Отправить правки': f"edits_{message.from_user.id}"

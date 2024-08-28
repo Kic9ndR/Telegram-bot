@@ -1,10 +1,12 @@
 from aiogram.types import InlineKeyboardButton
+from aiogram.filters.callback_data import CallbackData
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.orm_query import orm_get_user_works, orm_get_users
+from database.orm_query import *
 
 
+# Настраиваемые кнопки
 def get_callback_btns(
     *,
     btns: dict[str, str],
@@ -19,6 +21,7 @@ def get_callback_btns(
     return keyboard.adjust(*sizes).as_markup()
 
 
+# CallBack и URL кнопки
 def get_url_btns(
     *,
     btns: dict[str, str],
@@ -51,27 +54,53 @@ def get_inlineMix_btns(
 
 
 
+##################################################################################################################
+
+class ChoiceWorker(CallbackData, prefix="Works"):
+    action: str                                 # Вперед и назад для кнопок навигации
+    page: int = 0                               # Страница с работниками
+
+# Выбор сотрудника
 async def choice_worker_btns(
         session: AsyncSession,
-        sizes = (2,),
+        sizes = (1,2,),
+        page: int = 0,
         ):
 
-    user_info = await orm_get_users(session)
     keyboard = InlineKeyboardBuilder()
+    start_offset = page * 12
+    limit = 12
+    end_offset = start_offset + limit
+    user_info = await orm_get_users(session)
 
-    for worker in user_info:
-        keyboard.add(InlineKeyboardButton(text=
-                f'{worker.name}', callback_data=f"{worker.name} @{worker.username}"))
+    # for work in published_works[start_offset:end_offset]:
+        # keyboard.add(InlineKeyboardButton(text=f'{work.title}', callback_data=f'work_{work.title}'))
 
-    return keyboard.adjust(*sizes).as_markup()
+    keyboard.add(InlineKeyboardButton(text=f"Страница {page + 1}", callback_data='page'))  # Добавление кнопки "страница"
+    for worker in user_info[start_offset:end_offset]:
+        keyboard.add(InlineKeyboardButton(text=f'{worker.name}', callback_data=f"{worker.name} @{worker.username}"))
+        
+    keyboard.adjust(*sizes)
+
+    buttons_row = []                                        # Создание списка кнопок
+    if page > 0:                                            # Проверка, что страница не первая
+        buttons_row.append(InlineKeyboardButton(text="⬅️", callback_data=ChoiceWorker(action="prev", page=page - 1).pack()))  # Добавление кнопки "назад"
+    if end_offset < len(user_info):                         # Проверка, что ещё есть пользователи для следующей страницы
+        buttons_row.append(InlineKeyboardButton(text="➡️", callback_data=ChoiceWorker(action="next", page=page + 1).pack()))  # Добавление кнопки "вперед"
+    
+    keyboard.adjust(*sizes)
+
+    return keyboard.row(*buttons_row).as_markup()
 
 
+# Выбор работы для отправки
 async def choice_work_btns(
         session: AsyncSession,
         user_id: int,
         sizes = (2,),
         ):
 
+    
     keyboard = InlineKeyboardBuilder()
     works = await orm_get_user_works(session)
 
@@ -86,3 +115,60 @@ async def choice_work_btns(
         )
 
     return keyboard.adjust(*sizes).as_markup()
+
+
+####################################### Создание клавиатуры для выбора работы #######################################
+class ChoiceWork(CallbackData, prefix="Works"):
+    category: str | None = None                 # Опубликованные работы или нет
+    action: str                                 # Вперед и назад для кнопок навигации
+    page: int = 0                               # Страница с работами
+    work_title: int | None = None               # Название работы
+
+
+
+async def choice_works_btns(
+    session: AsyncSession,
+    *,
+    category: str,
+    page: int = 0,
+    sizes: tuple[int] = (1,2,)
+):
+    not_published_works = await orm_get_works_not_publish(session)
+    published_works = await orm_get_works_publish(session)
+
+    keyboard = InlineKeyboardBuilder()
+    start_offset = page * 14
+    limit = 14
+    end_offset = start_offset + limit
+
+
+    if category == 'realized':
+        count_works = len(published_works)
+        if count_works > 0:
+            keyboard.add(InlineKeyboardButton(text=f"Опубликованные работы\nСтраница {page + 1}", callback_data='page'))  # Добавление кнопки "страница"
+            for work in published_works[start_offset:end_offset]:
+                keyboard.add(InlineKeyboardButton(text=f'{work.title}', callback_data=f'work_{work.title}'))
+        else:
+            keyboard.add(InlineKeyboardButton(text=f"Работы отсутствуют", callback_data='page'))  # Добавление кнопки отсутствия работы
+    else:
+        count_works = len(not_published_works)
+        if count_works > 0:
+            keyboard.add(InlineKeyboardButton(text=f"В процессе создания\nСтраница {page + 1}", callback_data='page'))  # Добавление кнопки "страница"
+            for work in not_published_works[start_offset:end_offset]:
+                keyboard.add(InlineKeyboardButton(text=f'{work.title}', callback_data=f'work_{work.title}'))
+        else:
+            keyboard.add(InlineKeyboardButton(text=f"Работы отсутствуют", callback_data='page'))  # Добавление кнопки отсутствия работы
+    
+    keyboard.adjust(*sizes)
+
+
+    buttons_row = []                                        # Создание списка кнопок
+    if page > 0:                                            # Проверка, что страница не первая
+        buttons_row.append(InlineKeyboardButton(text="⬅️", callback_data=ChoiceWork(action="prev", page=page - 1, category=category).pack()))  # Добавление кнопки "назад"
+    if end_offset < count_works:                    # Проверка, что ещё есть пользователи для следующей страницы
+        buttons_row.append(InlineKeyboardButton(text="➡️", callback_data=ChoiceWork(action="next", page=page + 1, category=category).pack()))  # Добавление кнопки "вперед"
+    
+    keyboard.adjust(*sizes)
+
+    return keyboard.row(*buttons_row).as_markup()
+ 

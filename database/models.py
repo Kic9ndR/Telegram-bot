@@ -11,11 +11,12 @@ class Work(Base):
     __tablename__ = 'work'
 
     title: Mapped[str] = mapped_column(String(150), unique=True, primary_key=True)
+    work_comment: Mapped[str] = mapped_column(String(150), unique=False, nullable=True)
     deadline: Mapped[int] = mapped_column(unique=False, nullable=False)
     file_name: Mapped[str] = mapped_column(String(150), unique=False)
     file: Mapped[str] = mapped_column(String(150), unique=False, nullable=False)
     worker_name: Mapped[str] = mapped_column(unique=False, nullable=True)
-    image: Mapped[str] = mapped_column(String(150), unique=False, nullable=False)
+    image: Mapped[str] = mapped_column(String(255), unique=False, nullable=True)
     ready_status: Mapped[bool] = mapped_column(nullable=True)
 
 
