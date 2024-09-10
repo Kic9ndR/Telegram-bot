@@ -47,6 +47,7 @@ async def orm_add_user(
     payment_details: str,
     work_programs: str,
     residence_city: str,
+    drive: str,
 ):
     """
     Добавление карточки сотрудника
@@ -62,6 +63,7 @@ async def orm_add_user(
                 payment_details = payment_details,
                 work_programs=work_programs,
                 residence_city=residence_city,
+                drive=drive
                 )
         )
         await session.commit()
@@ -72,6 +74,7 @@ async def orm_add_user_data(
         payment_details: str,
         work_programs: str,
         residence_city: str,
+        drive: str,
     ):
     query = (
         update(UserID)
@@ -79,23 +82,44 @@ async def orm_add_user_data(
         .values( 
             payment_details=payment_details,
             work_programs=work_programs,
-            residence_city=residence_city
+            residence_city=residence_city,
+            drive=drive
         )
     )
     await session.execute(query)
     await session.commit()
+
+
+async def orm_add_user_drive(
+        session: AsyncSession,
+        user_id: int,
+        drive: str,
+    ):
+    query = (
+        update(UserID)
+        .where(UserID.user_id == user_id)
+        .values( 
+            drive=drive
+        )
+    )
+    await session.execute(query)
+    await session.commit()
+
 
 async def orm_get_users(session: AsyncSession):
     query = select(UserID)
     result = await session.execute(query)
     return result.scalars().all()
 
-
 async def orm_get_users_works(session: AsyncSession):
     query = select(UserID).options(selectinload(UserID.work))
     result = await session.execute(query)
     return result.scalars().all()
 
+async def orm_get_user_name(session: AsyncSession, name: str):
+    query = select(UserID).where(UserID.name == name)
+    result = await session.execute(query)
+    return result.scalar()
 
 async def orm_get_one_user(session: AsyncSession, user_id):
     query = select(UserID).where(UserID.user_id == user_id)
@@ -251,6 +275,7 @@ async def orm_update_work(session: AsyncSession, title: str, data: dict):
         .where(Work.title == title)
         .values(
             title=data['title'],
+            work_comment=data['work_comment'],
             deadline=data['deadline'],
             file_name=data['file_name'],
             file=data['file'],
@@ -281,6 +306,7 @@ async def orm_delete_worker_name(session: AsyncSession, title: str):
 async def orm_add_archive_work(
     session: AsyncSession,
     title: str,
+    work_comment: str,
     deadline: int,
     file_name: str,
     file: str,
@@ -293,6 +319,7 @@ async def orm_add_archive_work(
         session.add(
             Archive(
                 title=title,
+                work_comment=work_comment,
                 deadline=deadline,
                 file_name=file_name,
                 file=file,

@@ -30,6 +30,7 @@ class AddName(StatesGroup):
     payment_details = State()
     work_programs = State()
     residence_city = State()
+    drive = State()
 
     programs = []
     mes_id = None
@@ -50,6 +51,9 @@ async def start_cmd(message: types.Message, session: AsyncSession, state: FSMCon
     elif (user.payment_details) is None:
         await state.set_state(AddName.payment_details)
         await message.answer('Введите номер телефона и банк для перевода:', reply_markup=reply.del_kb)
+    elif (user.drive) is None:
+        await state.set_state(AddName.drive)
+        await message.answer('Вставь ссылку на Яндекс Диск с работами', reply_markup=reply.del_kb)
     else:
         await message.answer("Что интересует?", reply_markup=reply.start_kb)
 
@@ -129,8 +133,14 @@ async def add_programs(callback: types.CallbackQuery, state: FSMContext):
 
 
 @user_router.message(AddName.residence_city, F.text)
-async def add_city(message: types.Message, state: FSMContext, session: AsyncSession, bot: Bot):
+async def add_city(message: types.Message, state: FSMContext):
     await state.update_data(residence_city=message.text)
+    await message.answer('Вставь ссылку на Яндекс Диск с работами', reply_markup=reply.del_kb)
+    await state.set_state(AddName.drive)
+
+@user_router.message(AddName.drive, F.text)
+async def add_drive(message: types.Message, state: FSMContext, session: AsyncSession, bot: Bot):
+    await state.update_data(drive=message.text)
     data = await state.get_data()
     user = message.from_user
     programs = ''
@@ -153,12 +163,14 @@ async def add_city(message: types.Message, state: FSMContext, session: AsyncSess
                 payment_details = data['payment_details'],
                 work_programs = programs,
                 residence_city = data['residence_city'],
-                )
+                drive = data['drive']
+            )
             
             google_table.create_sheet(user_name)
             google_table.add_name(user_name, user.username)
             google_table.add_user_info(user_name, data['payment_details'], programs, data['residence_city'])
-        else:
+
+        elif orm_user.payment_details is None:
             user_name = orm_user.name
             await orm_add_user_data(
                 session, 
@@ -166,8 +178,19 @@ async def add_city(message: types.Message, state: FSMContext, session: AsyncSess
                 payment_details = data['payment_details'],
                 work_programs = programs,
                 residence_city = data['residence_city'],
-                )
-            google_table.add_user_info(user_name, data['payment_details'], programs, data['residence_city'])
+                drive = data['drive']
+            )
+            google_table.add_user_info(user_name, data['payment_details'], programs, data['residence_city'], data['drive'])
+
+        else:
+            user_name = orm_user.name
+            await orm_add_user_drive(
+                session, 
+                user_id=user.id, 
+                drive = data['drive']
+            )
+            google_table.add_user_drive(user_name, data['drive'])
+
     except Exception as e:
         await message.answer(f'Ошибка: {e}\nОбратитесь к @Kic9ndr')
     
@@ -175,6 +198,7 @@ async def add_city(message: types.Message, state: FSMContext, session: AsyncSess
 
     AddName.programs = []
     await message.answer(f'Добавил твои данные, {user_name}, спасибо 😃', reply_markup=reply.start_kb)
+
 
 
 #####################################################################################################################################################
@@ -195,9 +219,10 @@ async def current_work_cmd(message: types.Message, session: AsyncSession):
         else:
             for all_works in await orm_get_user_works(session):
                 if all_works.user_id == user_id:
-                    work = await orm_get_one_work(session, all_works.current_work)
+                    current_work = all_works.current_work
+                    work = await orm_get_one_work(session, current_work)
                     await message.answer_photo(
-                        photo=work.image, 
+                        photo=work.image,
                         caption=
                         f'<b>Работа</b> - {work.title}\n<b>Комментарий:</b> {work.work_comment}\n<b>Срок выполнения:</b> {work.deadline}\n<b>Ссылка на файл:</b> <a href="{work.file}"> Work Files </a>\n<b>Оклад за работу:</b> {all_works.salary}\n<b>Твоя задача:</b> {all_works.task}',
                         parse_mode='HTML'
@@ -219,7 +244,7 @@ class SendWork(StatesGroup):
 
 
 @user_router.message(
-    or_f(Command("send work"), (F.text.lower() == "отправить работу 📧"))
+    or_f(Command("send_work"), (F.text.lower() == "отправить работу 📧"))
 )
 async def work_btns(message: types.Message, state: FSMContext, session: AsyncSession):
     """
@@ -255,13 +280,15 @@ async def send_work_comment(message: types.Message, state: FSMContext):
 async def send_work(message: types.Message, bot: Bot, state: FSMContext, session: AsyncSession):
     await state.update_data(work=message.text)
     data = await state.get_data()
+    await state.clear()
+    
     work_title = data['choice_work']                        # Название отправляемой работы
     comment = data["comment"]                               # Комментарий к работе
     send_work = await bot.send_message(chat_id=int(admin_chat), text=
                 f'Работа <i>{work_title}</i> на проверку от @{message.from_user.username}\nКомментарий к работе: {comment}\n\nСсылка на работу:\n{message.text}',
                 message_thread_id=int(admin_message_thread), reply_markup=get_callback_btns(btns={
-                    'Принять работу': f"accept_{message.from_user.id}",
-                    'Отправить правки': f"edits_{message.from_user.id}"
+                    'Принять работу': f"accept_{work_title}_{message.from_user.id}",
+                    'Отправить правки': f"edits_{work_title}_{message.from_user.id}"
                 }, sizes={1,1}
             ), disable_web_page_preview=True
         )
@@ -277,9 +304,8 @@ async def send_work(message: types.Message, bot: Bot, state: FSMContext, session
             work_id=work_id
         )
     
-    await state.clear()
-    await orm_update_user_status(session, user.user_id, True)     # Изменение статуса проверки на "Проверка"
-
+    await orm_update_user_status(session, user.user_id, True)     # Изменение статуса проверки на "Проверка" в базе данных
+    
 
 #-------------------------------------------------------------------------------------------------------
 @user_router.message(or_f(Command("archive"), (F.text.lower() == "архивные работы 🗄️")))
@@ -300,7 +326,6 @@ async def archive_cmd(message: types.Message, session: AsyncSession, bot: Bot):
     else:
         await message.answer('Архивных работы кончились :( ')
 
-
 #-------------------------------------------------------------------------------------------------------
 @user_router.message(F.text.lower() == "хочу работу 🤑")
 async def want_to_work(message: types.Message, bot: Bot, session: AsyncSession):
@@ -308,7 +333,7 @@ async def want_to_work(message: types.Message, bot: Bot, session: AsyncSession):
     admin_list = [5825144544, 5624308044]
     for i in admin_list:
         await bot.send_sticker(chat_id=i, sticker='CAACAgIAAxkBAAEMsoVmydWYfGwFoazZb8ffbF3D29zF-AACIwADX93LNgABGL7i461AdjUE')
-        await bot.send_message(chat_id=i, text=f'{user.name} @{user.username} хочет поработать, нужно больше золота нужно построить зиккурат ')
+        await bot.send_message(chat_id=i, text=f'{user.name} @{user.username} хочет поработать, нужно больше золота, нужно построить зиккурат ')
     await message.answer(text='Вас понял 🫡\nОтправил пожелание капитану', reply_markup=reply.start_kb)
 
 
@@ -316,7 +341,7 @@ async def want_to_work(message: types.Message, bot: Bot, session: AsyncSession):
 @user_router.message(or_f(Command("timetable"), (F.text.lower() == "график работы 🗓")))
 async def nav_cal_handler(message: Message):
     await message.answer(text=
-        "Таблица с графиком:\nhttps://docs.google.com/spreadsheets/d/1VTlLg0JOvnw-owN4xpzwl7Vl_5vtooEukcCH3phl6Nw/edit?gid=1574826567#gid=1574826567", 
+        "Таблица с графиком:\nhttps://docs.google.com/spreadsheets/d/1VTlLg0JOvnw-owN4xpzwl7Vl_5vtooEukcCH3phl6Nw", 
         reply_markup=reply.start_kb
     )
 
@@ -344,8 +369,6 @@ async def report_work_comment(message: types.Message, state: FSMContext):
 #       |
 #      \ /
 #       '
-
-# @user_router.message(F.content_type.in_([CT.PHOTO]))
 
 @user_router.message(ReportWork.photo, F.photo)
 async def report_work_photo(message: types.Message, album: list[Message], bot: Bot, session: AsyncSession, state: FSMContext):
@@ -394,28 +417,3 @@ async def send_video(message: types.Message, bot: Bot, session: AsyncSession):
 #     with open('user_about.md', 'r', encoding='utf-8') as user_list:
 #         user_text = user_list.read()
 #     await message.answer(text=(user_text), reply_markup=reply.start_kb)
-
-
-"""
-========================================== Вызов календаря ==========================================
-"""
-
-
-#     await message.answer(
-#         "Выберите дату: ",
-#         reply_markup=await SimpleCalendar(locale="Russian_Russia").start_calendar(),
-#     )
-
-
-# @user_router.callback_query(SimpleCalendarCallback.filter())
-# async def process_simple_calendar(
-#     callback_query: CallbackQuery, callback_data: CallbackData
-# ):
-#     calendar = SimpleCalendar(locale="Russian_Russia", show_alerts=True)
-#     calendar.set_dates_range(datetime(2024, 1, 1), datetime(2050, 12, 31))
-#     selected, date = await calendar.process_selection(callback_query, callback_data)
-#     if selected:
-#         await callback_query.message.answer(
-#             f'Выбрана дата: {date.strftime("%d/%m/%Y")}',
-#             reply_markup=reply.timetable_kb,
-#         )

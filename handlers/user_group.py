@@ -62,6 +62,7 @@ async def add_admins(message: types.Message, bot: Bot, session: AsyncSession) ->
 @user_group.callback_query(F.data.startswith('accept_'))
 async def send_accepted_work(callback: types.CallbackQuery, bot: Bot, session: AsyncSession):
     user_id = callback.data.split('_')[-1]
+    work_title = callback.data.split('_')[1]
     user_info = await orm_get_one_user(session, user_id)
     await callback.answer('Работу принял')
     await callback.message.reply("Отлично, работу принял")
@@ -70,7 +71,12 @@ async def send_accepted_work(callback: types.CallbackQuery, bot: Bot, session: A
 
     # Редактирования сообщение в групповом чате
     for i in await orm_get_all_id_message(session):
-        if int(user_id) == i.user_id:
+        if (int(user_id) == i.user_id) and (str(work_title) in i.title):
+            if i.title == 'nothing':
+                title = 'не указана'
+            else:
+                title = i.title
+
             await bot.edit_message_text(
                 chat_id=int(admin_chat), 
                 message_id=i.id, 
@@ -81,14 +87,9 @@ async def send_accepted_work(callback: types.CallbackQuery, bot: Bot, session: A
             await orm_delete_user_work(session, i.work_id)             # Удаление работы в назначенных работах пользователя
 
     # Отправка нового статуса в GoogleSheet
-    try:
-        user_name = await orm_get_one_user(session, user_id)
-        title = user_name.name          # Название листа
-        google_table = GoogleTable()
-        google_table.update_status(title=title, work=user_name.current_work, new_status="Выполнено")
-    except Exception as e:
-        callback.message.answer('Ошибка при добавлении пользователя в GoogleSheet', e)
-
+    title = user_info.name          # Название листа
+    google_table = GoogleTable()
+    google_table.update_status(title=title, work=work_title, new_status="Выполнено")
 
 ####################################################################################################################
 
@@ -96,6 +97,7 @@ class SendWork(StatesGroup):
     user_name = State()
     doc = State()
     message_id = None
+    work_title = None
 
     user_id = None
 
@@ -117,8 +119,10 @@ async def cancel_handler(message: types.Message, state: FSMContext) -> None:
 @user_group.callback_query(StateFilter(None), F.data.startswith('edits_'))
 async def send_edits(callback: types.CallbackQuery, state: FSMContext):
     user_id = callback.data.split('_')[-1]
+    work_title = callback.data.split('_')[1]
 
     SendWork.user_id = user_id
+    SendWork.work_title = work_title
     SendWork.message_id = callback.message.message_id
 
     await state.set_state(SendWork.user_name)
@@ -132,6 +136,8 @@ async def send_edits(callback: types.CallbackQuery, state: FSMContext):
 @user_group.message(SendWork.doc, F.document)
 async def add_doc(message: types.Message, bot: Bot, state: FSMContext, session: AsyncSession):
     await state.update_data(doc=message.document)
+    work_title = SendWork.work_title
+    user_info = await orm_get_one_user(session, int(SendWork.user_id))
 
     try:
         data = await state.get_data()
@@ -141,29 +147,26 @@ async def add_doc(message: types.Message, bot: Bot, state: FSMContext, session: 
                             f'Вам отправили правки по вашей работе')
         await message.answer(text="Отправил правки", reply_to_message_id=SendWork.message_id)
     except Exception as e:
-        print(e)
         await message.answer(f"Ошибка при отправке правок сотруднику:\n{e}\nОбратись к @Kic9ndr")
 
     await state.clear()
 
-
     # Редактирования сообщение в групповом чате
-    user_info = await orm_get_one_user(session, int(SendWork.user_id))
     for i in await orm_get_all_id_message(session):
-        if int(SendWork.user_id) == i.user_id:
+        if (int(SendWork.user_id) == i.user_id) and (str(work_title) in i.title):
+            if i.title == 'nothing':
+                title = 'не указана'
+            else:
+                title = i.title
             await bot.edit_message_text(
                 chat_id=int(admin_chat), 
                 message_id=i.id, 
-                text=f'Отправлены <b>правки</b> по работе <i>{i.title}</i> к @{user_info.username}\n\nСсылка на отправленные файлы: {i.work_link}',
+                text=f'Отправлены <b>правки</b> по работе <i>{title}</i> к @{user_info.username}\n\nСсылка на отправленные файлы: {i.work_link}',
                 disable_web_page_preview=True,
             )
             await orm_delete_id_message(session, i.id)
 
     # Отправка нового статуса в GoogleSheet
-    try:
-        user_name = await orm_get_one_user(session, user)
-        title = user_name.name
-        google_table = GoogleTable()
-        google_table.update_status(title=title, work=user_name.current_work, new_status="Правки")
-    except Exception as e:
-        message.answer('Ошибка при добавлении пользователя в GoogleSheet', e)
+    title = user_info.name
+    google_table = GoogleTable()
+    google_table.update_status(title=title, work=work_title, new_status="Правки")

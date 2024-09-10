@@ -50,12 +50,12 @@ class GoogleTable:
             cell = f'A{c + 1}'
             work_name = worksheet.get_value(cell)
             if work in work_name:
-                value = worksheet.get_value(f'F{c+1}')
-                print(value)
-                if value != '':
-                    count = int(value) + 1
-                else:
-                    count = 1
+                value = worksheet.get_value(f'G{c+1}')
+                if new_status != 'Выполнено':
+                    if value != '':
+                        count = int(value) + 1
+                    else:
+                        count = 1
                 status = worksheet.update_value(f'C{c+1}' , new_status)
                 new_value = worksheet.update_value(f'G{c+1}', int(count))
                 return status, new_value
@@ -74,6 +74,7 @@ class GoogleTable:
             payment_details: str,
             work_programs: str,
             residence_city: str,
+            drive: str,
     ):
         googlesheet_client = self._get_googlesheet_client()
         sheet = googlesheet_client.open_by_url(self.googlesheet_file_url)
@@ -81,7 +82,20 @@ class GoogleTable:
         payment = worksheet.update_value('H2', payment_details)
         programs = worksheet.update_value('I2', work_programs)
         city = worksheet.update_value('J2', residence_city)
-        return payment, programs, city
+        new_drive = worksheet.update_value('K2', drive)
+        return payment, programs, city, new_drive
+
+
+    def add_user_drive(
+            self,
+            title: str,
+            drive: str,
+    ):
+        googlesheet_client = self._get_googlesheet_client()
+        sheet = googlesheet_client.open_by_url(self.googlesheet_file_url)
+        worksheet = sheet.worksheet_by_title(title)
+        new_drive = worksheet.update_value('K2', drive)
+        return new_drive
 
 
     def get_all_info(self, title: str):                                                 # Получаем всю информацию с листа в диапазоне data[-:-]
@@ -98,3 +112,25 @@ class GoogleTable:
         worksheet = sheet.worksheet_by_title(title)
         url = "https://docs.google.com/spreadsheets/d/"+ str(sheet.id) +"/edit#gid="+ str(worksheet.id)
         return url
+    
+
+    def add_project(                                                     # Добавляется проект в график проектов
+        self,
+        project_name: str,
+        curator: str,
+        start_date,
+        end_date,
+        comment: str,
+    ):
+        googlesheet_client = self._get_googlesheet_client()
+        sheet = googlesheet_client.open_by_url(self.googlesheet_file_url)
+        worksheet = sheet[0]
+        for c in range(worksheet.rows):         # Значение строки, начинается с 0
+            value = worksheet.get_value(f'B{c+1}')
+            if value == '' and c != 0:
+                project_title = worksheet.update_value(f'B{c+1}', project_name)
+                project_curator = worksheet.update_value(f'C{c+1}', curator)
+                project_start_date = worksheet.update_value(f'D{c+1}', start_date)
+                project_end_date = worksheet.update_value(f'E{c+1}', end_date)
+                project_comment = worksheet.update_value(f'B{c+2}', comment)
+                return project_title, project_curator, project_start_date, project_end_date, project_comment

@@ -21,7 +21,6 @@ class Work(Base):
 
 
 ###################################################################################################################
-
 class UserID(Base):
     __tablename__ = 'user_id'
 
@@ -31,12 +30,12 @@ class UserID(Base):
     payment_details: Mapped[str] = mapped_column(String(50), nullable=True)
     work_programs: Mapped[str] = mapped_column(String(50), nullable=True)
     residence_city: Mapped[str] = mapped_column(String(50), nullable=True)
+    drive: Mapped[str] = mapped_column(String(100), nullable=True)
 
     work: Mapped[list["UserWork"]] = relationship(back_populates="user")
 
 
 ###################################################################################################################
-
 class UserWork(Base):
     __tablename__ = 'user work' 
 
@@ -48,6 +47,17 @@ class UserWork(Base):
     check_work: Mapped[bool] = mapped_column(unique=False)
     
     user: Mapped["UserID"] = relationship(back_populates="work")
+
+
+###################################################################################################################
+class UserSkills(Base):
+    __tablename__ = 'user skills'
+
+    user_id: Mapped[int] = mapped_column(primary_key=True)
+    modeling: Mapped[str] = mapped_column(String(150), unique=False, nullable=True)
+    texture_baking: Mapped[str] = mapped_column(String(150), unique=False, nullable=True)
+    texturing: Mapped[str] = mapped_column(String(150), unique=False, nullable=True)
+    special_skills: Mapped[str] = mapped_column(String(150), unique=False, nullable=True)
 
 
 ###################################################################################################################
@@ -64,6 +74,7 @@ class Archive(Base):
     __tablename__ = 'archive'
 
     title: Mapped[str] = mapped_column(String(150), unique=True, primary_key=True)
+    work_comment: Mapped[str] = mapped_column(String(150), unique=False, nullable=True)
     deadline: Mapped[int] = mapped_column(unique=False, nullable=False)
     file_name: Mapped[str] = mapped_column(String(150), unique=False)
     file: Mapped[str] = mapped_column(String(150), unique=False, nullable=False)
