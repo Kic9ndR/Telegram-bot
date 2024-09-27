@@ -1,5 +1,6 @@
-aiogram
-sqlalchemy
+aiogram 3.
+sqlalchemy 2.
 python-dotenv
 asyncpg
 aiosqlite
+pygsheets

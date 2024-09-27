@@ -13,7 +13,7 @@ start_kb = ReplyKeyboardMarkup(
             KeyboardButton(text='Отправить работу 📧'),
         ],
         [
-            KeyboardButton(text='Отчет о работе 💬'),
+            KeyboardButton(text='Мой профиль 🪪'),
             KeyboardButton(text='Хочу работу 🤑'),
         ],
         [
@@ -39,9 +39,22 @@ admin_kb = ReplyKeyboardMarkup(
         [
             KeyboardButton(text='Создание задачи ✍🏼'),
         ],
+        [
+            KeyboardButton(text='Быстрая задача 🚀'),
+        ],
     ],
     resize_keyboard=True,
     input_field_placeholder="Выберите нужный пункт:"
+)
+
+cancel = ReplyKeyboardMarkup(
+    keyboard=[
+        [
+            KeyboardButton(text='Отмена'),
+        ],
+    ],
+    resize_keyboard=True,
+    input_field_placeholder='Нажми кнопку "Отмена", чтобы не отправлять файл'
 )
 
 admin_nav = ReplyKeyboardMarkup(
@@ -52,7 +65,7 @@ admin_nav = ReplyKeyboardMarkup(
         ],
     ],
     resize_keyboard=True,
-    input_field_placeholder="Назад - вернуться на шаг назад. Отмена - отменить создание"
+    input_field_placeholder="Назад - вернуться на шаг назад. Отмена - отменить действие"
 )
 
 #----------------------------------------------------------------------------------

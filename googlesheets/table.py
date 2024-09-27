@@ -68,6 +68,35 @@ class GoogleTable:
         return worksheet.append_table(values=data, dimension='ROWS', overwrite=False)
 
 
+    def update_user_info(                                                          # Добавляется информация о реквизитах, программах и городе сотрудника 
+            self,
+            title: str,
+            username: str,
+            payment_details: str,
+            work_programs: str,
+            residence_city: str,
+            drive: str,
+    ):
+        googlesheet_client = self._get_googlesheet_client()
+        sheet = googlesheet_client.open_by_url(self.googlesheet_file_url)
+        worksheet = sheet.worksheet_by_title(title)
+
+        new_username = worksheet.update_value('E2', username)
+        payment = worksheet.update_value('H2', payment_details)
+        programs = worksheet.update_value('I2', work_programs)
+        city = worksheet.update_value('J2', residence_city)
+        new_drive = worksheet.update_value('K2', drive)
+        return payment, programs, city, new_drive, new_username
+    
+
+    def update_accept_processing(self, title):
+        googlesheet_client = self._get_googlesheet_client()
+        sheet = googlesheet_client.open_by_url(self.googlesheet_file_url)
+        worksheet = sheet.worksheet_by_title(title)
+
+        return worksheet.update_value('L2', 'TRUE')
+      
+
     def add_user_info(                                                          # Добавляется информация о реквизитах, программах и городе сотрудника 
             self,
             title: str,
@@ -113,6 +142,27 @@ class GoogleTable:
         url = "https://docs.google.com/spreadsheets/d/"+ str(sheet.id) +"/edit#gid="+ str(worksheet.id)
         return url
     
+
+    def get_user_archive(self, title: str):
+        googlesheet_client = self._get_googlesheet_client()
+        sheet = googlesheet_client.open_by_url(self.googlesheet_file_url)
+        worksheet = sheet.worksheet_by_title(title)
+
+        works = []
+        for c in range(worksheet.rows):
+            status = f'C{c + 1}'
+            work_status = worksheet.get_value(status)
+            if work_status == 'Выполнено':
+                
+                work = worksheet.get_value(f"A{c + 1}")
+                task = worksheet.get_value(f"B{c + 1}")
+                work_salary = worksheet.get_value(f"D{c + 1}")
+                payment_status = worksheet.get_value(f"F{c + 1}")
+
+                works.append((work, task, work_salary, payment_status))
+        return works
+
+
 
     def add_project(                                                     # Добавляется проект в график проектов
         self,

@@ -12,9 +12,9 @@ class Work(Base):
 
     title: Mapped[str] = mapped_column(String(150), unique=True, primary_key=True)
     work_comment: Mapped[str] = mapped_column(String(150), unique=False, nullable=True)
-    deadline: Mapped[int] = mapped_column(unique=False, nullable=False)
-    file_name: Mapped[str] = mapped_column(String(150), unique=False)
-    file: Mapped[str] = mapped_column(String(150), unique=False, nullable=False)
+    deadline: Mapped[str] = mapped_column(unique=False, nullable=False)
+    file_name: Mapped[str] = mapped_column(String(150), unique=False, nullable=True)
+    file: Mapped[str] = mapped_column(String(150), unique=False, nullable=True)
     worker_name: Mapped[str] = mapped_column(unique=False, nullable=True)
     image: Mapped[str] = mapped_column(String(255), unique=False, nullable=True)
     ready_status: Mapped[bool] = mapped_column(nullable=True)
@@ -31,6 +31,7 @@ class UserID(Base):
     work_programs: Mapped[str] = mapped_column(String(50), nullable=True)
     residence_city: Mapped[str] = mapped_column(String(50), nullable=True)
     drive: Mapped[str] = mapped_column(String(100), nullable=True)
+    accept_processing: Mapped[bool] = mapped_column(unique=False, nullable=True)
 
     work: Mapped[list["UserWork"]] = relationship(back_populates="user")
 
@@ -54,10 +55,9 @@ class UserSkills(Base):
     __tablename__ = 'user skills'
 
     user_id: Mapped[int] = mapped_column(primary_key=True)
-    modeling: Mapped[str] = mapped_column(String(150), unique=False, nullable=True)
-    texture_baking: Mapped[str] = mapped_column(String(150), unique=False, nullable=True)
-    texturing: Mapped[str] = mapped_column(String(150), unique=False, nullable=True)
+    modeling: Mapped[str] = mapped_column(unique=False, nullable=True)
     special_skills: Mapped[str] = mapped_column(String(150), unique=False, nullable=True)
+    role: Mapped[str] = mapped_column(String(150), unique=False, nullable=True)
 
 
 ###################################################################################################################
@@ -76,10 +76,10 @@ class Archive(Base):
     title: Mapped[str] = mapped_column(String(150), unique=True, primary_key=True)
     work_comment: Mapped[str] = mapped_column(String(150), unique=False, nullable=True)
     deadline: Mapped[int] = mapped_column(unique=False, nullable=False)
-    file_name: Mapped[str] = mapped_column(String(150), unique=False)
-    file: Mapped[str] = mapped_column(String(150), unique=False, nullable=False)
+    file_name: Mapped[str] = mapped_column(String(150), unique=False, nullable=True)
+    file: Mapped[str] = mapped_column(String(150), unique=False, nullable=True)
     worker_name: Mapped[str] = mapped_column(unique=False, nullable=True)
-    image: Mapped[str] = mapped_column(String(150), unique=False, nullable=False)
+    image: Mapped[str] = mapped_column(String(150), unique=False, nullable=True)
     create_time: Mapped[DateTime] = mapped_column(DateTime, default=func.now())
 
 

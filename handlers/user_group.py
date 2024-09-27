@@ -1,3 +1,4 @@
+import asyncio
 import os
 from sre_parse import State
 from aiogram import F, Bot, types, Router
@@ -11,6 +12,7 @@ from database.orm_query import *
 from filters.chat_types import ChatFilter
 from common.bot_cmds_list import admin
 from googlesheets.table import GoogleTable
+from kbrd import reply
 
 
 user_group = Router()
@@ -130,7 +132,10 @@ async def send_edits(callback: types.CallbackQuery, state: FSMContext):
     await state.set_state(SendWork.doc)
 
     await callback.answer()
-    await callback.message.answer('Загрузите файл', reply_to_message_id=SendWork.message_id)
+    await callback.message.answer('Загрузите файл', reply_to_message_id=SendWork.message_id, reply_markup=reply.cancel)
+    # await asyncio.sleep(10)
+    # await callback.message.answer('Долго жду файл. Отменил отправку', reply_to_message_id=SendWork.message_id, reply_markup=reply.del_kb)
+    # await state.clear()
 
 
 @user_group.message(SendWork.doc, F.document)
@@ -145,7 +150,7 @@ async def add_doc(message: types.Message, bot: Bot, state: FSMContext, session: 
         user = data['user_name']
         await bot.send_document(chat_id=user, document=file.file_id, caption=
                             f'Вам отправили правки по вашей работе')
-        await message.answer(text="Отправил правки", reply_to_message_id=SendWork.message_id)
+        await message.answer(text="Отправил правки", reply_to_message_id=SendWork.message_id, reply_markup=reply.del_kb)
     except Exception as e:
         await message.answer(f"Ошибка при отправке правок сотруднику:\n{e}\nОбратись к @Kic9ndr")
 
@@ -153,7 +158,7 @@ async def add_doc(message: types.Message, bot: Bot, state: FSMContext, session: 
 
     # Редактирования сообщение в групповом чате
     for i in await orm_get_all_id_message(session):
-        if (int(SendWork.user_id) == i.user_id) and (str(work_title) in i.title):
+        if (int(SendWork.user_id) == i.user_id) and (work_title) in i.title:
             if i.title == 'nothing':
                 title = 'не указана'
             else:

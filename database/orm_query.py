@@ -63,8 +63,9 @@ async def orm_add_user(
                 payment_details = payment_details,
                 work_programs=work_programs,
                 residence_city=residence_city,
-                drive=drive
-                )
+                drive=drive,
+                accept_processing = False
+            )
         )
         await session.commit()
 
@@ -89,6 +90,30 @@ async def orm_add_user_data(
     await session.execute(query)
     await session.commit()
 
+async def orm_update_user_prof(
+        session: AsyncSession,
+        user_id: int,
+        username: str,
+        payment_details: str,
+        work_programs: str,
+        residence_city: str,
+        drive: str,
+    ):
+    query = (
+        update(UserID)
+        .where(UserID.user_id == user_id)
+        .values(
+                user_id=user_id,
+                username=username,
+                payment_details = payment_details,
+                work_programs=work_programs,
+                residence_city=residence_city,
+                drive=drive
+        )
+    )
+    await session.execute(query)
+    await session.commit()
+
 
 async def orm_add_user_drive(
         session: AsyncSession,
@@ -100,6 +125,22 @@ async def orm_add_user_drive(
         .where(UserID.user_id == user_id)
         .values( 
             drive=drive
+        )
+    )
+    await session.execute(query)
+    await session.commit()
+
+
+async def orm_update_accept_processing(
+        session: AsyncSession,
+        user_id: int,
+        new_value: str,
+    ):
+    query = (
+        update(UserID)
+        .where(UserID.user_id == user_id)
+        .values( 
+            accept_processing=new_value
         )
     )
     await session.execute(query)
@@ -154,6 +195,18 @@ async def orm_add_user_work(
     await session.commit()
 
 
+async def orm_update_user_work(session: AsyncSession, title: str, new_title: str):
+    query = (
+        update(UserWork)
+        .where(UserWork.title == title)
+        .values(
+            title=new_title,
+        )
+    )
+    await session.execute(query)
+    await session.commit()
+
+
 async def orm_get_user_works(session: AsyncSession):
     query = select(UserWork)
     result = await session.execute(query)
@@ -183,6 +236,74 @@ async def orm_delete_user_work(session: AsyncSession, work_id: int):
     )
     await session.execute(query)
     await session.commit()
+
+
+############################################## Добавление навыков сотрудника ##############################################
+
+async def orm_add_user_skills(
+        session: AsyncSession,
+        user_id: int,
+        modeling: list,
+        special_skills: str,
+    ):
+    """
+    Добавление навыков сотрудника
+    """
+    query = select(UserSkills).where(UserSkills.user_id == user_id)
+    await session.execute(query)
+    session.add(
+        UserSkills(
+            user_id=user_id,
+            modeling=modeling,
+            special_skills=special_skills,
+        )
+    )
+    await session.commit()
+
+
+async def orm_update_user_skills(
+        session: AsyncSession,
+        user_id: int,
+        modeling: list,
+        special_skills: str,
+    ):
+    """
+    Добавление навыков сотрудника
+    """
+    query = (
+        update(UserSkills)
+        .where(UserSkills.user_id == user_id)
+        .values(
+            user_id=user_id,
+            modeling=modeling,
+            special_skills=special_skills,
+        )
+    )
+    await session.execute(query)
+    await session.commit()
+
+
+async def orm_update_user_role(
+        session: AsyncSession,
+        user_id: int,
+        new_role: str,
+    ):
+    """
+    Добавление навыков сотрудника
+    """
+    query = (
+        update(UserSkills)
+        .where(UserSkills.user_id == user_id)
+        .values(role=new_role)
+    )
+    await session.execute(query)
+    await session.commit()
+
+
+async def orm_get_one_user_skills(session: AsyncSession, user_id: int):
+    query = select(UserSkills).where(UserSkills.user_id == user_id)
+    result = await session.execute(query)
+    return result.scalar()
 
 
 ############################################## Добавление работы ##############################################
