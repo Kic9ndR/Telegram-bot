@@ -462,6 +462,7 @@ async def my_profile2(callback: types.CallbackQuery, session: AsyncSession):
     user_id = callback.data.split('_')[-1]
     await callback.message.delete()
     await callback.answer()
+    user_skill = await orm_get_one_user_skills(session, callback.message.from_user.id)
     user = await orm_get_one_user(session, user_id)
     payment = user.payment_details
     programs = user.work_programs
@@ -473,6 +474,11 @@ async def my_profile2(callback: types.CallbackQuery, session: AsyncSession):
         for i in user_info.work:                             # Вход в экземпляр UserID.work и получение данных
             if i.user_id == user.user_id:
                 user_works.append(f'{i.current_work} -- оклад {i.salary} руб.')
+
+    if user_skill is None:
+        role = 'Странник'
+    else:
+        role = user_skill.role
     if user_works == []:
         user_works.append("У человека нет работ")
     if payment is None:
@@ -483,7 +489,7 @@ async def my_profile2(callback: types.CallbackQuery, session: AsyncSession):
         city = 'не из этого мира 👽'
 
     await callback.message.answer(
-        f'<b>Имя</b>: {user.name}\n<b>Юзернейм</b>: @{user.username}\n\n<b>Счет</b>: {payment}\n<b>Программы</b>: {programs}\n<i><b>Город</b></i> - {city}\n\n<b>Ссылка на Яндекс Диск:</b>\n{user.drive}\n<b>Работы сотрудника</b>:\n' + '\n'.join(user_works),
+        f'<b>Имя</b>: {user.name}\n<b>Юзернейм</b>: @{user.username}\n<b>{role}</b>\n\n<b>Счет</b>: {payment}\n<b>Программы</b>: {programs}\n<i><b>Город</b></i> - {city}\n\n<b>Ссылка на Яндекс Диск:</b>\n{user.drive}\n<b>Работы сотрудника</b>:\n' + '\n'.join(user_works),
         reply_markup=get_callback_btns(
             btns={
                 'Редактировать': f'edit_my_profile_{user.user_id}',
