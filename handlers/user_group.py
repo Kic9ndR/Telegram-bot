@@ -1,4 +1,3 @@
-import asyncio
 import os
 from sre_parse import State
 from aiogram import F, Bot, types, Router
@@ -6,7 +5,6 @@ from aiogram.filters import Command, StateFilter
 from sqlalchemy.ext.asyncio import AsyncSession
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
-
 
 from database.orm_query import *
 from filters.chat_types import ChatFilter

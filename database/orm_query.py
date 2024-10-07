@@ -492,6 +492,12 @@ async def orm_get_all_id_message(session: AsyncSession):
     return result.scalars().all()
 
 
+async def orm_get_id_message(session: AsyncSession, title: str):
+    query = select(MessageSend).where(MessageSend.title == title)
+    result = await session.execute(query)
+    return result.scalars().all()
+
+
 async def orm_delete_id_message(session: AsyncSession, id: int):
     query = delete(MessageSend).where(MessageSend.id == id)
     await session.execute(query)

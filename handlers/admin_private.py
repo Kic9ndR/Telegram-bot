@@ -6,6 +6,7 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from common.work_output import work_output, work_output2
 from database.orm_query import *
 from filters.chat_types import ChatFilter, IsAdmin
 from googlesheets.table import GoogleTable
@@ -20,10 +21,8 @@ admin_router.message.filter(ChatFilter(["private"]), IsAdmin())
 
 user_chat = os.getenv('USER_CHAT')
 user_message_thread = os.getenv('USER_MESSAGE_THREAD')
-
 admin_chat = os.getenv('ADMIN_CHAT')
 admin_message_thread = os.getenv('ADMIN_MESSAGE_THREAD')
-
 message_thread_archive = os.getenv('MESSAGE_THREAD_ARCHIVE')
 
 
@@ -263,47 +262,8 @@ async def get_work(callback: types.CallbackQuery, session: AsyncSession, bot: Bo
     work = callback.data.split('_')[-1]
     await callback.answer(f'Работа {work}')
     await callback.message.delete()
-    title = await orm_get_one_work(session, work)
 
-    if title.worker_name is None:                                   # Проверка, что строка исполнителей пустая
-        worker_name = 'Исполнители еще не назначены'                # Если пустая, то информирую об этом об этом
-    else:
-        worker_name = title.worker_name
-
-    if title.image is None:
-        await callback.message.answer(
-            f'{title.title}\nКомментарий: {title.work_comment}\nСрок выполнения: {title.deadline}\nИсполнитель: \n{worker_name}',
-            reply_markup=get_callback_btns(btns={
-                'Полностью удалить работу': f'delete_{title.title}',
-                'Отправить в архив': f'sendarchive_{title.title}',
-                'Назначить': f'appoint_{title.title}',
-                '↩️': f'realized'
-            }, sizes=(1,1,1)), parse_mode='HTML',
-        )
-    elif title.ready_status == False:                                 # Если работа еще не опубликована
-        await callback.message.answer_photo(
-            title.image,
-            caption=f'{title.title}\nКомментарий: {title.work_comment}\nСрок выполнения: {title.deadline}\nСсылка на файл: <a href="{title.file}"> Work Files </a>\nСписок исполнителей:\n{worker_name}',
-            reply_markup=get_callback_btns(btns={
-                'Назначить': f'appoint_{title.title}',
-                'Изменить': f'select_{title.title}',
-                'Отправить в работу': f'send_{title.title}',
-                'Полностью удалить работу': f'delete_{title.title}',
-                '↩️': f'process'
-            }, sizes=(2,1,1)), parse_mode='HTML',
-        )
-    else:                                                           # Если уже отправлена в работу
-        await callback.message.answer_photo(
-            title.image,
-            caption=f'{title.title}\n<b>Комментарий</b>: {title.work_comment}\n<b>Срок выполнения:</b> {title.deadline}\n<b>Ссылка на файл:</b> <a href="{title.file}"> Work Files </a>\n<b>Назначены:</b>\n{worker_name}',
-            reply_markup=get_callback_btns(btns={
-                'Назначить': f'appoint_{title.title}',
-                'Изменить': f'select_{title.title}',
-                'Отправить в архив': f'sendarchive_{title.title}',
-                'Полностью удалить работу': f'delete_{title.title}',
-                '↩️': f'realized'
-                }, sizes=(2,1,1)), parse_mode='HTML'
-        )
+    await work_output(callback, session, work)      # Вывод работы
 
 
 @admin_router.callback_query(F.data == 'comeback')
@@ -369,6 +329,10 @@ async def send_work_archive(callback: types.CallbackQuery, session: AsyncSession
             f"💰 - <b>{work.title}</b>\n💬 - {work.work_comment}\n🗓 - {work.deadline}\n📂 - {work.file_name}\n👉 <a href='{work.file}'> Work Files </a>\n{work.worker_name}", 
             message_thread_id=int(message_thread_archive), parse_mode='HTML',
         )
+
+    for mess_id in await orm_get_id_message(session, work.title):
+        await orm_delete_user_work(session, mess_id.work_id)             # Удаление работы в назначенных работах пользователя
+        await orm_delete_id_message(session, mess_id.id)                 # Удаление id сообщения для редактирования
 
     # Редактирование работы в группе
     for i in await orm_get_all_id_send_work(session):
@@ -627,43 +591,8 @@ async def change_work(callback: types.CallbackQuery, state: FSMContext, session:
         await bot.send_chat_action(chat_id=callback.message.from_user.id, action='typing')
     
     work = orm_get_one_work(session, title)
-    if work.worker_name is None:
-        worker_name = 'Исполнители не назначены'
-    else:
-        worker_name = work.worker_name
-    
-    if work.image is None:
-        await callback.message.answer(
-            f'{work.title}\nКомментарий: {work.work_comment}\nСрок выполнения: {work.deadline}\nИсполнитель: \n{worker_name}',
-            reply_markup=get_callback_btns(btns={
-                'Полностью удалить работу': f'delete_{work.title}',
-                'Отправить в архив': f'sendarchive_{work.title}',
-                'Назначить': f'appoint_{work.title}',
-                '↩️': f'realized'
-            }, sizes=(1,1,1)), parse_mode='HTML',
-        )
-    elif work.ready_status == False:                                 # Если работа еще не опубликована
-        await callback.message.answer_photo(
-            work.image,
-            caption=f'{work.title}\nКомментарий: {work.work_comment}\nСрок выполнения: {work.deadline}\nСсылка на файл: <a href="{work.file}"> Work Files </a>\nСписок исполнителей:\n{worker_name}',
-            reply_markup=get_callback_btns(btns={
-                'Назначить': f'appoint_{work.title}',
-                'Изменить': f'select_{work.title}',
-                'Отправить в работу': f'send_{work.title}',
-                'Полностью удалить работу': f'delete_{work.title}',
-            }, sizes=(2,1,1)), parse_mode='HTML',
-        )
-    else:                                                           # Если уже отправлена в работу
-        await callback.message.answer_photo(
-            work.image,
-            caption=f'{work.title}\n<b>Комментарий</b>: {work.work_comment}\n<b>Срок выполнения:</b> {work.deadline}\n<b>Ссылка на файл:</b> <a href="{work.file}"> Work Files </a>\n<b>Назначены:</b>\n{worker_name}',
-            reply_markup=get_callback_btns(btns={
-                'Назначить': f'appoint_{work.title}',
-                'Изменить': f'select_{work.title}',
-                'Отправить в архив': f'sendarchive_{work.title}',
-                'Полностью удалить работу': f'delete_{work.title}',
-                }, sizes=(2,1,1)), parse_mode='HTML'
-        )
+
+    await work_output(callback, session, work)      # Вывод работы
     await state.clear()
 
 ################################################################################################################
@@ -674,9 +603,8 @@ async def change_work(callback: types.CallbackQuery, state: FSMContext, session:
 @admin_router.message(StateFilter(None), F.text == "Создание задачи ✍🏼")
 async def create_task(message: types.Message, state: FSMContext):
     CreateTask.change_work = False
-    if message.text == "Быстрая задача 🚀":
+    if message.text in "Быстрая задача 🚀":
         CreateTask.quick_work = True
-    print(message.text, CreateTask.quick_work)
     await message.answer('Введите название работы\nПри создании не используй "_" и соблюдай лимит в 24 символа', reply_markup=reply.admin_nav)
     await state.set_state(CreateTask.title)
 
@@ -741,7 +669,9 @@ async def set_deadline(message: types.Message, state: FSMContext, session: Async
         await state.update_data(deadline = message.text)
         data = await state.get_data()
         title = data['title']
+        CreateTask.quick_work = False
         await state.clear()
+
         await orm_add_work(
             session, 
             title=title,
@@ -856,44 +786,8 @@ async def add_image(message: types.Message, state: FSMContext, session: AsyncSes
             chat_id=int(user_chat), message_id=work_id.id,
             caption=f"💰 - {i.title}\n💬 - {i.work_comment}\n🗓 - {i.deadline}\n📂 - {i.file_name}\n👉 <a href='{i.file}'> Work Files </a>\n{worker_name}",
         )
-
-    if i.image is None:
-        await message.answer(
-            f'{i.title}\nКомментарий: {i.work_comment}\nСрок выполнения: {i.deadline}\nИсполнитель: \n{worker_name}',
-            reply_markup=get_callback_btns(btns={
-                'Полностью удалить работу': f'delete_{i.title}',
-                'Отправить в архив': f'sendarchive_{i.title}',
-                'Назначить': f'appoint_{i.title}',
-                '↩️': f'realized'
-            }, sizes=(1,1,1)), parse_mode='HTML',
-        )
-    """
-    Если добавляли работу выводим список незаконченных работ
-    """
-    if i.ready_status == False:     # Выполняется проверка есть ли данное название и в каком статусе работа
-        await message.answer_photo(photo=data['image'], caption=
-            f'<b>{i.title}</b>\n<b>Комментарий</b>: {i.work_comment}\n<b>Срок выполнения:</b> {i.deadline}\n<b>Ссылка на файл:</b> <a href="{i.file}"> Work Files </a>\n<b>Назначены:</b>\n{worker_name}',
-            reply_markup=get_callback_btns(btns={
-                'Назначить': f'appoint_{i.title}',
-                'Изменить': f'select_{i.title}',
-                'Полностью удалить работу': f'delete_{i.title}',
-                'Отправить в работу': f'send_{i.title}',
-            }, sizes=(2,1,1)), parse_mode='HTML'
-        )
-    else:
-        """
-        Если изменяли работу выводим список законченных работ
-        """
-        await message.answer_photo(photo=i.image, caption=
-            f'<b>{i.title}</b>\n<b>Комментарий</b>: {i.work_comment}\n<b>Срок выполнения:</b> {i.deadline}\n<b>Ссылка на файл:</b> <a href="{i.file}"> Work Files </a>\n<b>Назначены:</b>\n{worker_name}',
-            reply_markup=get_callback_btns(btns={
-                    'Назначить': f'appoint_{i.title}',
-                    'Изменить': f'select_{i.title}',
-                    'Отправить в архив': f'sendarchive_{i.title}',
-                    'Полностью удалить работу': f'delete_{i.title}',
-                }, sizes=(2,1,1)
-            ), parse_mode='HTML'
-        )
+    
+    await work_output2(message, session, title_id)      # Вывод работы
   
     CreateTask.title_for_change = ''
 
@@ -1016,38 +910,11 @@ async def add_name(callback: types.CallbackQuery, state: FSMContext, session: As
         await state.clear()
 
     i = await orm_get_one_work(session, title_id)
-    if i.image is None:
-        await callback.message.answer(
-            f'{i.title}\nКомментарий: {i.work_comment}\nСрок выполнения: {i.deadline}\nИсполнитель: \n{i.worker_name}',
-            reply_markup=get_callback_btns(btns={
-                'Полностью удалить работу': f'delete_{i.title}',
-                'Отправить в архив': f'sendarchive_{i.title}',
-                'Назначить': f'appoint_{i.title}',
-            }, sizes=(1,1,1)), parse_mode='HTML',
-        )
-    elif i.ready_status == False:            # Если работа не опубликована, то:
-        await callback.message.answer_photo(photo=i.image, caption=
-            f'<b>{i.title}</b>\n<b>Комментарий</b>: {i.work_comment}\n<b>Срок выполнения:</b> {i.deadline}\n<b>Ссылка на файл:</b> <a href="{i.file}"> Work Files </a>\n<b>Назначены:</b>\n{i.worker_name}',
-            reply_markup=get_callback_btns(btns={
-                    'Назначить': f'appoint_{i.title}',
-                    'Изменить': f'select_{i.title}',
-                    'Полностью удалить работу': f'delete_{i.title}',
-                    'Отправить в работу': f'send_{i.title}',
-                }, sizes=(2,1,1)), parse_mode='HTML'
-            )
-    else:
-        await callback.message.answer_photo(photo=i.image, caption=
-                f'<b>{i.title}</b>\n<b>Комментарий</b>: {i.work_comment}\n<b>Срок выполнения:</b> {i.deadline}\n<b>Ссылка на файл:</b> <a href="{i.file}"> Work Files </a>\n<b>Назначены:</b>\n{i.worker_name}',
-                reply_markup=get_callback_btns(btns={
-                        'Назначить': f'appoint_{i.title}',
-                        'Изменить': f'select_{i.title}',
-                        'Отправить в архив': f'sendarchive_{i.title}',
-                        'Полностью удалить работу': f'delete_{i.title}',
-                    }, sizes=(2,1,1)
-                ), parse_mode='HTML'
-            )
-        # Изменение исполнителей в группе с работами
-        work_id = await orm_get_id_send_work(session, i.title)
+    await work_output(callback, session, title_id)      # Вывод работы
+
+    # Изменение исполнителей в группе с работами
+    work_id = await orm_get_id_send_work(session, i.title)
+    if work_id is not None:
         await bot.edit_message_caption(chat_id=int(user_chat), message_id=work_id.id,
                 caption=f"💰 - {i.title}\n💬 - {i.work_comment}\n🗓 - {i.deadline}\n📂 - {i.file_name}\n👉 <a href='{i.file}'> Work Files </a>\n{i.worker_name}",)
         
@@ -1150,7 +1017,6 @@ async def user_skills(callback: types.CallbackQuery, session: AsyncSession):
             }, sizes=(1, 2)
         ),
     )
-
 
 #####################################################################################################################
 class Skills(StatesGroup):

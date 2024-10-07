@@ -395,7 +395,7 @@ async def send_work(message: types.Message, bot: Bot, state: FSMContext, session
     
 
 #-------------------------------------------------------------------------------------------------------
-@user_router.message(or_f(Command("archive"), (F.text.lower() == "архивные работы 🗄️")))
+@user_router.message(or_f(Command("archival_works"), (F.text.lower() == "архивные работы 🗄️")))
 async def archive_cmd(message: types.Message, session: AsyncSession, bot: Bot):
     user = await orm_get_one_user(session, message.from_user.id)
     if user.accept_processing is False:                   # Проверка пользовательского соглашения
@@ -406,11 +406,12 @@ async def archive_cmd(message: types.Message, session: AsyncSession, bot: Bot):
     await message.answer('Пожалуйста, подождите немного')
     await bot.send_chat_action(chat_id = user.user_id, action="typing")
     works = google_table.get_user_archive(user.name)
+    print(works)
     for work in works:
-        if work[-1] == 'FALSE':
+        if work[-1] in 'FALSE':
             payment_status = 'Не оплачена'
         else:
-            payment_status = work[-1]
+            payment_status = 'Оплачена'
 
         archive_work = await orm_get_one_archive_work(session, work[0])
         current_work = await orm_get_one_work(session, work[0])
@@ -421,7 +422,8 @@ async def archive_cmd(message: types.Message, session: AsyncSession, bot: Bot):
         else:
             await message.answer('У Вас нет архивных работ\nВы можете просмотреть свои <b>текущие работы</b> написать <i>/current_work</i> или открыв свой профиль')
             return
-
+        
+        print(f"<b>Работа</b> - {work[0]}\n<b>Задача</b> - {work[1]}\n<b>Оклад<b> - {work[2]}\n<b>Статус оплаты</b> - {payment_status}")
         await message.answer_photo(photo=image,
             caption=f"<b>Работа</b> - {work[0]}\n<b>Задача</b> - {work[1]}\n<b>Оклад<b> - {work[2]}\n<b>Статус оплаты</b> - {payment_status}"
         ) 
