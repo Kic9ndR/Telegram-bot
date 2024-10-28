@@ -213,6 +213,18 @@ async def orm_get_user_works(session: AsyncSession):
     return result.scalars().all()
 
 
+async def orm_get_one_user_works(session: AsyncSession, user_id: int):
+    query = select(UserWork).where(UserWork.user_id == user_id)
+    result = await session.execute(query)
+    return result.scalars().all()
+
+
+async def orm_get_one_user_works2(session: AsyncSession, work: str):
+    query = select(UserWork).where(UserWork.current_work == work)
+    result = await session.execute(query)
+    return result.scalars().all()
+
+
 async def orm_get_user_work(session: AsyncSession, user_id: int):
     query = select(UserWork).where(UserWork.user_id == user_id)
     result = await session.execute(query)

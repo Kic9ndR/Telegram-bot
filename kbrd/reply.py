@@ -21,7 +21,7 @@ start_kb = ReplyKeyboardMarkup(
         ],
     ],
     resize_keyboard=True,
-    input_field_placeholder="Выберите нужный пункт:",
+    input_field_placeholder="Выберите нужный пункт",
 )
 
 #----------------------------------------------------------------------------------
@@ -44,7 +44,7 @@ admin_kb = ReplyKeyboardMarkup(
         ],
     ],
     resize_keyboard=True,
-    input_field_placeholder="Выберите нужный пункт:"
+    input_field_placeholder="Выберите нужный пункт"
 )
 
 cancel = ReplyKeyboardMarkup(

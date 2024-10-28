@@ -156,12 +156,9 @@ async def project_klnd(message: types.Message):
 async def all_worker(callback: types.CallbackQuery, session: AsyncSession):
     await callback.answer()
     user_list = []
-    user_works = []
     users = await orm_get_users_works(session)          # Получаю всех юзеров с параметром работ
     for user in users:                                  # Вход в экземпляр юзера
         works = await orm_get_user_work(session, user.user_id)
-        # for i in user.work:                             # Вход в экземпляр UserID.work и получение данных
-        #     user_works.append(i.current_work)
         if works is None:
             pass
         else:
@@ -263,7 +260,7 @@ async def get_work(callback: types.CallbackQuery, session: AsyncSession, bot: Bo
     await callback.answer(f'Работа {work}')
     await callback.message.delete()
 
-    await work_output(callback, session, work)      # Вывод работы
+    await work_output(callback, session, work)                  # Вывод работы
 
 
 @admin_router.callback_query(F.data == 'comeback')
@@ -280,7 +277,7 @@ async def comeback_work(callback: types.CallbackQuery, session: AsyncSession):
             }, sizes={1, 1, 1}
         ), parse_mode='HTML'
     )
-
+#_____________________________________________________________________________________________________________
 @admin_router.callback_query(ChoiceWork.filter())
 async def work_pagination_handler(call: types.CallbackQuery, callback_data: ChoiceWork, session: AsyncSession):
     """ Навигация по списку работ """
@@ -289,7 +286,7 @@ async def work_pagination_handler(call: types.CallbackQuery, callback_data: Choi
     await call.answer()
     await call.message.edit_reply_markup(reply_markup=await choice_works_btns(session, page=page, category=category))  # Обновление клавиатуры при нажатии кнопок навигации
 
-
+#_____________________________________________________________________________________________________________
 @admin_router.callback_query(ChoiceWorker.filter())
 async def worker_pagination_handler(call: types.CallbackQuery, callback_data: ChoiceWorker, session: AsyncSession):
     """ Навигация для списка сотрудников """
@@ -329,9 +326,10 @@ async def send_work_archive(callback: types.CallbackQuery, session: AsyncSession
             f"💰 - <b>{work.title}</b>\n💬 - {work.work_comment}\n🗓 - {work.deadline}\n📂 - {work.file_name}\n👉 <a href='{work.file}'> Work Files </a>\n{work.worker_name}", 
             message_thread_id=int(message_thread_archive), parse_mode='HTML',
         )
-
+    for user_work in await orm_get_one_user_works2(session, work.title):
+        await orm_delete_user_work(session, user_work.work_id)           # Удаление работы в назначенных работах пользователя
+        
     for mess_id in await orm_get_id_message(session, work.title):
-        await orm_delete_user_work(session, mess_id.work_id)             # Удаление работы в назначенных работах пользователя
         await orm_delete_id_message(session, mess_id.id)                 # Удаление id сообщения для редактирования
 
     # Редактирование работы в группе
@@ -362,99 +360,7 @@ async def archive_work(callback: types.CallbackQuery, session: AsyncSession):
             title.image,
             caption=f'{title.title}\n<b>Комментарий</b>: {title.work_comment}\n<b>Срок выполнения:</b> {title.deadline}\n<b>Ссылка на файл:</b> <a href="{title.file}"> Work Files </a>\n<b>Назначены:</b>\n{title.worker_name}',
     )
-
-
-########################################################################################################################
-
-class Project(StatesGroup):
-    project_name = State()
-    curator = State()
-    start_date = State()
-    end_date = State()
-    comment = State()
-
-    texts = {
-    "Project:project_name": 'Введите название проекта',
-    "Project:curator": 'Введите имя куратора',
-    "Project:start_date": 'Введите начало работы',
-    "Project:end_date": 'Введите завершение работы',
-    "Project:comment": 'Введите комментарий',
-    }
-
-################################################ Команда назад ################################################
-@admin_router.message(StateFilter(Project), Command("назад"))
-@admin_router.message(StateFilter(Project), F.text.casefold() == "назад")
-async def back_step_handler(message: types.Message, state: FSMContext) -> None:
-
-    current_state = await state.get_state()
-
-    if current_state == Project.project_name:
-        await message.answer('Предыдущего шага нет, напишите "отмена"')
-        return
-
-    previous = None
-    for step in Project.__all_states__:
-        if step.state == current_state:
-            await state.set_state(previous)
-            await message.answer(f"Вернул к прошлому шагу\n{Project.texts[previous.state]}")
-            return
-        previous = step
-
-
-@admin_router.message(StateFilter(None), or_f(Command('project'), F.text == 'Добавление проекта 📊'))
-async def add_project(message: types.Message, state: FSMContext):
-    await message.answer('Введите название проекта', reply_markup=reply.admin_nav)
-    await state.set_state(Project.project_name)
-
-
-@admin_router.message(Project.project_name, F.text)
-async def project_name(message: types.Message, state: FSMContext):
-    await state.update_data(project_name=message.text)
-    await message.answer('Введите имя куратора')
-    await state.set_state(Project.curator)
-
-
-@admin_router.message(Project.curator, F.text)
-async def curator_name(message: types.Message, state: FSMContext):
-    await state.update_data(curator=message.text)
-    await message.answer('Введите дату начала проекта')
-    await state.set_state(Project.start_date)
-
-
-@admin_router.message(Project.start_date, F.text)
-async def start_date(message: types.Message, state: FSMContext):
-    await state.update_data(start_date=message.text)
-    await message.answer('Введите дату окончания проекта')
-    await state.set_state(Project.end_date)
-
-
-@admin_router.message(Project.end_date, F.text)
-async def end_date(message: types.Message, state: FSMContext):
-    await state.update_data(end_date=message.text)
-    await message.answer('Введите комментарий к проекту')
-    await state.set_state(Project.comment)
-
-
-@admin_router.message(Project.comment, F.text)
-async def comment(message: types.Message, state: FSMContext, bot: Bot):
-    await state.update_data(comment=message.text)
-    data = await state.get_data()
-    await state.clear()
-    await bot.send_chat_action(chat_id=message.from_user.id, action='typing')
-
-    data_comment = data['comment']
-    comment=f'Комментарий: {data_comment}'
-    google_table = GoogleTable(googlesheet_file_url="https://docs.google.com/spreadsheets/d/10HbRZe4bOX7UcIdb6kA5vpu-rqETZb8bGHuaU_tqhGA")
-    google_table.add_project(
-        project_name=data['project_name'], 
-        curator=data['curator'], 
-        start_date=data['start_date'], 
-        end_date=data['end_date'], 
-        comment=comment
-    )
-    await message.answer(f'<b>Отлично!</b> Добавил проект', reply_markup=reply.admin_kb)
     
-
 """
 Удаление работы ===================================================================================================================================================
 """
@@ -938,7 +844,7 @@ async def add_name2(message: types.Message):
     await message.answer("Необходимо выбрать имя на клавиатуре")
 
 
-####################################################################################
+###################################################################################################
 
 @admin_router.callback_query(F.data.contains('back_user'))
 @admin_router.callback_query(F.data.contains('@'))
@@ -989,7 +895,7 @@ async def choice_workers_data(callback: types.CallbackQuery, session: AsyncSessi
         ), disable_web_page_preview=True
     )
 
-
+#________________________________________________________________________________________________________________________________
 @admin_router.callback_query(F.data.startswith('next_'))
 async def user_skills(callback: types.CallbackQuery, session: AsyncSession):
     user_id = callback.data.split('_')[-1]
@@ -1044,7 +950,7 @@ class Skills(StatesGroup):
                 }, sizes=(2, 2, 2, 1, 1, 2)
             )
 
-
+#________________________________________________________________________________________________________________________________
 @admin_router.message(StateFilter(Skills), Command("назад"))
 @admin_router.message(StateFilter(Skills), F.text.casefold() == "назад")
 async def back_step_handler_skill(message: types.Message, state: FSMContext) -> None:
@@ -1062,7 +968,7 @@ async def back_step_handler_skill(message: types.Message, state: FSMContext) -> 
         previous = step
 
 
-#####################################################################################################################
+#________________________________________________________________________________________________________________________________
 @admin_router.message(Skills.grade, F.text)
 async def add_grade(message: types.Message, state: FSMContext):
     if Skills.all_skills != '':
@@ -1075,7 +981,7 @@ async def add_grade(message: types.Message, state: FSMContext):
     await state.set_state(Skills.back_step)
 
 
-#####################################################################################################################
+#________________________________________________________________________________________________________________________________
 @admin_router.callback_query(StateFilter(Skills), F.data == 'continue')
 async def continue_handler(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer()
@@ -1091,7 +997,7 @@ async def continue_handler(callback: types.CallbackQuery, state: FSMContext):
         previous = step
 
 
-#####################################################################################################################
+#________________________________________________________________________________________________________________________________
 @admin_router.callback_query(StateFilter(Skills), F.data == 'cancel')
 async def continue_handler(callback: types.CallbackQuery, state: FSMContext):
     await callback.message.delete()
@@ -1100,7 +1006,7 @@ async def continue_handler(callback: types.CallbackQuery, state: FSMContext):
     await callback.message.answer('Удалил все значения\nВведите навыки повторно', reply_markup=Skills.texts)
 
 
-#####################################################################################################################
+#________________________________________________________________________________________________________________________________
 @admin_router.callback_query(StateFilter(None), F.data.startswith('addedit_'))   # Срабатывает при нажатии на кнопку "Редактировать" скиллы
 @admin_router.callback_query(StateFilter(None), F.data.startswith('addskills_'))   # Срабатывает при нажатии на кнопку "Добавить навыки"
 async def add_skills(callback: types.CallbackQuery, state: FSMContext):
@@ -1114,7 +1020,7 @@ async def add_skills(callback: types.CallbackQuery, state: FSMContext):
     await state.set_state(Skills.modeling)
 
 
-#####################################################################################################################
+#________________________________________________________________________________________________________________________________
 @admin_router.callback_query(Skills.modeling, F.data.startswith('skill_'))
 async def add_modeling(callback: types.CallbackQuery, state: FSMContext):
     skill = callback.data.split('_')[-1]
@@ -1126,7 +1032,7 @@ async def add_modeling(callback: types.CallbackQuery, state: FSMContext):
     await state.set_state(Skills.grade)
 
 
-#####################################################################################################################
+#________________________________________________________________________________________________________________________________
 @admin_router.message(Skills.special_skills, F.text)
 async def add_modeling(message: types.Message, state: FSMContext, session: AsyncSession):
     await state.update_data(special_skills=message.text)
@@ -1148,3 +1054,130 @@ async def add_modeling(message: types.Message, state: FSMContext, session: Async
             special_skills=data['special_skills']
         )
     await message.answer("Успешно добавил навыки!")
+
+
+#####################################################################################################################
+class ProjectPreparation(StatesGroup):
+    client = State()
+    named = State()
+    deadline = State()
+    link = State()
+    team = State()
+
+#________________________________________________________________________________________________________________________________
+@admin_router.message(StateFilter(None), Command("project_preparation"))
+async def project_preparation(message: types.Message, state: FSMContext):
+    await message.answer('Напиши заказчика', reply_markup=reply.admin_nav)
+    await state.set_state(ProjectPreparation.client)
+
+#________________________________________________________________________________________________________________________________
+@admin_router.message(ProjectPreparation.client)
+async def add_client(message: types.Message, state: FSMContext):
+    await state.update_data(client=message.text)
+    await message.answer('Напиши название проекта')
+    await state.set_state(ProjectPreparation.named)
+
+#________________________________________________________________________________________________________________________________
+@admin_router.message(ProjectPreparation.named)
+async def add_pj_named(message: types.Message, state: FSMContext):
+    await state.update_data(named=message.text)
+    await message.answer('Напиши дату сдачи проекта')
+    await state.set_state(ProjectPreparation.deadline)
+
+#________________________________________________________________________________________________________________________________
+@admin_router.message(ProjectPreparation.deadline)
+async def add_proj_deadline(message: types.Message, state: FSMContext):
+    await state.update_data(deadline=message.text)
+    await message.answer('Вставь ссылку на файлы')
+    await state.set_state(ProjectPreparation.link)
+
+#________________________________________________________________________________________________________________________________
+@admin_router.message(ProjectPreparation.link)
+async def add_link(message: types.Message, state: FSMContext):
+    await state.update_data(link=message.text)
+    await message.answer(
+        'Передать файлы для подготовки проекта', reply_markup=get_callback_btns(
+            btns={
+                'Отправить': f'first_team',
+            }
+        )
+    )
+    await state.set_state(ProjectPreparation.team)
+
+#________________________________________________________________________________________________________________________________
+@admin_router.callback_query(ProjectPreparation.team, F.data)
+async def add_team(callback: types.CallbackQuery, state: FSMContext, bot: Bot):
+    await callback.message.delete_reply_markup()
+    await callback.answer('Отправил данные')
+    data = await state.get_data()
+    await state.clear()
+    NewProject.support = data
+    client = data['client']
+    named = data['named']
+    deadline = data['deadline']
+    link = data['link']
+
+    await bot.send_message(chat_id=(285062516), text='⬇️⬇️⬇️Данные для подготовки проекта⬇️⬇️⬇️')
+    await bot.send_message(chat_id=(285062516), text=(
+        f'<b>Заказчик:</b>\n<i>{client}</i>\n<b>Название проекта:</b>\n<i>{named}</i>\n<b>Срок выполнения:</b> {deadline}\n<b>Ссылка на файлы:</b>\n{link}'
+        ), disable_web_page_preview=True, reply_markup=get_callback_btns(
+            btns={
+                'Отдать проект в работу Егору': f'help',
+                'Отправить работу Эрику': 'project_880624724',
+                'Отправить работу Данилу': 'project_834162337',
+                }, sizes=(1,2)
+        )
+    )
+    
+    await callback.message.answer('Отправил данные', reply_markup=reply.admin_kb)
+
+
+#####################################################################################################################
+class NewProject(StatesGroup):
+    send_project = State()
+
+    support = None
+    team = None
+
+#________________________________________________________________________________________________________________________________
+@admin_router.callback_query(F.data.startswith('help'))
+async def new_project(callback: types.CallbackQuery, bot: Bot):
+    await callback.answer('Отправил данные')
+    data = NewProject.support
+    client = data['client']
+    named = data['named']
+    deadline = data['deadline']
+    link = data['link']
+    NewProject.support = None
+
+    await bot.send_message(chat_id=(5617295673), text='⬇️⬇️⬇️Данные для подготовки проекта⬇️⬇️⬇️')
+    await bot.send_message(chat_id=(5617295673), text=(
+        f'<b>Заказчик:</b>\n<i>{client}</i>\n<b>Название проекта:</b>\n<i>{named}</i>\n<b>Срок выполнения:</b> {deadline}\n<b>Ссылка на файлы:</b>\n{link}'
+        ), disable_web_page_preview=True, reply_markup=get_callback_btns(
+            btns={
+                'Отправить работу Эрику': 'project_880624724',
+                'Отправить работу Даниле': 'project_834162337',
+                }
+        )
+    )
+#________________________________________________________________________________________________________________________________
+@admin_router.callback_query(StateFilter(None), F.data.startswith('project_'))
+async def new_project(callback: types.CallbackQuery, state: FSMContext):
+    team = callback.data.split('_')[-1]
+    await callback.answer()
+    NewProject.team = int(team)
+
+    await callback.message.answer('Вставь ссылку на файлы проекта', reply_markup=reply.admin_nav)
+    await state.set_state(NewProject.send_project)
+
+#________________________________________________________________________________________________________________________________
+@admin_router.message(NewProject.send_project, F.text)
+async def send_new_project(message: types.Message, state: FSMContext, bot: Bot):
+    send_project=message.text
+    adm_proj = NewProject.team
+
+    await bot.send_message(chat_id=int(adm_proj), text=f'Тебе отправили файлы для нового <b>Проекта</b>!\n\n{send_project}', disable_web_page_preview=True)
+    await bot.send_message(chat_id=int(admin_chat), text=send_project, message_thread_id=int(3), disable_web_page_preview=True)
+
+    await state.clear()
+    await message.answer('Отправил файлы', reply_markup=reply.admin_kb)

@@ -1,3 +1,4 @@
+import asyncio
 import os
 from sre_parse import State
 from aiogram import F, Bot, types, Router
@@ -67,7 +68,7 @@ async def send_accepted_work(callback: types.CallbackQuery, bot: Bot, session: A
     await callback.answer('Работу принял')
     await callback.message.reply("Отлично, работу принял")
 
-    await bot.send_message(chat_id=user_info.user_id, text=f'Вашу работу <b>Приняли</b>!', parse_mode='HTML')
+    await bot.send_message(chat_id=user_info.user_id, text=f'Вашу работу {work_title} <b>Приняли</b>!', parse_mode='HTML')
 
     # Редактирования сообщение в групповом чате
     for i in await orm_get_all_id_message(session):
@@ -96,9 +97,10 @@ async def send_accepted_work(callback: types.CallbackQuery, bot: Bot, session: A
 class SendWork(StatesGroup):
     user_name = State()
     doc = State()
+
+    load_file = None
     message_id = None
     work_title = None
-
     user_id = None
 
 ####################################################################################################################
@@ -117,7 +119,7 @@ async def cancel_handler(message: types.Message, state: FSMContext) -> None:
 ####################################################################################################################
 
 @user_group.callback_query(StateFilter(None), F.data.startswith('edits_'))
-async def send_edits(callback: types.CallbackQuery, state: FSMContext):
+async def send_edits(callback: types.CallbackQuery, state: FSMContext, bot: Bot):
     user_id = callback.data.split('_')[-1]
     work_title = callback.data.split('_')[1]
 
@@ -130,12 +132,13 @@ async def send_edits(callback: types.CallbackQuery, state: FSMContext):
     await state.set_state(SendWork.doc)
 
     await callback.answer()
-    await callback.message.answer('Загрузите файл', reply_to_message_id=SendWork.message_id, reply_markup=reply.cancel)
-    # await asyncio.sleep(10)
-    # await callback.message.answer('Долго жду файл. Отменил отправку', reply_to_message_id=SendWork.message_id, reply_markup=reply.del_kb)
-    # await state.clear()
+    msg = await callback.message.answer('Загрузите файл', reply_to_message_id=SendWork.message_id, reply_markup=reply.cancel)
 
+    await asyncio.sleep(30)
+    await bot.delete_message(chat_id=int(admin_chat), message_id=msg.message_id)
+    await state.clear()
 
+#____________________________________________________________________________________________________________________
 @user_group.message(SendWork.doc, F.document)
 async def add_doc(message: types.Message, bot: Bot, state: FSMContext, session: AsyncSession):
     await state.update_data(doc=message.document)
@@ -147,12 +150,10 @@ async def add_doc(message: types.Message, bot: Bot, state: FSMContext, session: 
         file = data['doc']
         user = data['user_name']
         await bot.send_document(chat_id=user, document=file.file_id, caption=
-                            f'Вам отправили правки по вашей работе')
+                            f'Вам отправили правки по вашей работе -- {SendWork.work_title}')
         await message.answer(text="Отправил правки", reply_to_message_id=SendWork.message_id, reply_markup=reply.del_kb)
     except Exception as e:
         await message.answer(f"Ошибка при отправке правок сотруднику:\n{e}\nОбратись к @Kic9ndr")
-
-    await state.clear()
 
     # Редактирования сообщение в групповом чате
     for i in await orm_get_all_id_message(session):
@@ -163,12 +164,13 @@ async def add_doc(message: types.Message, bot: Bot, state: FSMContext, session: 
                 title = i.title
             await bot.edit_message_text(
                 chat_id=int(admin_chat), 
-                message_id=i.id, 
+                message_id=SendWork.message_id, 
                 text=f'Отправлены <b>правки</b> по работе <i>{title}</i> к @{user_info.username}\n\nСсылка на отправленные файлы: {i.work_link}',
                 disable_web_page_preview=True,
             )
             await orm_delete_id_message(session, i.id)
 
+    await state.clear()
     # Отправка нового статуса в GoogleSheet
     title = user_info.name
     google_table = GoogleTable()

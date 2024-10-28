@@ -1,4 +1,5 @@
 import os
+import random
 from aiogram import types, Router, F, Bot
 from aiogram.filters import Command, or_f, StateFilter
 from aiogram.types import Message, FSInputFile
@@ -47,7 +48,7 @@ class AddName(StatesGroup):
     programs = []
     mes_id = None
 
-
+#_________________________________________________________________________________________
 @user_router.message(StateFilter('*'), Command("отмена"))
 @user_router.message(StateFilter('*'), F.text.casefold() == "отмена")
 async def cancel_handler(message: types.Message, state: FSMContext) -> None:
@@ -59,7 +60,7 @@ async def cancel_handler(message: types.Message, state: FSMContext) -> None:
     await state.clear()
     await message.answer("Действия отменены", reply_markup=reply.start_kb)
 
-
+#_________________________________________________________________________________________
 @user_router.message(StateFilter(AddName), Command("назад"))
 @user_router.message(StateFilter(AddName), F.text.casefold() == "назад")
 async def back_step_handler(message: types.Message, state: FSMContext) -> None:
@@ -78,6 +79,7 @@ async def back_step_handler(message: types.Message, state: FSMContext) -> None:
             return
         previous = step
 
+#_________________________________________________________________________________________
 @user_router.message(
     or_f(
         Command("start"), (F.text.lower() == "в начало ↩️"), (F.text.lower() == "старт")
@@ -96,7 +98,7 @@ async def start_cmd(message: types.Message, session: AsyncSession, state: FSMCon
     else:
         await message.answer("Что интересует?", reply_markup=reply.start_kb)
 
-
+#_________________________________________________________________________________________
 @user_router.message(AddName.name, or_f(F.text, F.text == '.'))
 async def add_name(message: types.Message, state: FSMContext):
     if message.text == '.' and AddName.change_prof is True:
@@ -106,7 +108,7 @@ async def add_name(message: types.Message, state: FSMContext):
     await message.answer('Введите номер телефона и банк для перевода:', reply_markup=reply.del_kb)
     await state.set_state(AddName.payment_details)
 
-
+#_________________________________________________________________________________________
 @user_router.message(AddName.payment_details, or_f(F.text, F.text == '.'))
 async def add_payment(message: types.Message, state: FSMContext):
     if message.text == '.' and AddName.change_prof is True:
@@ -135,7 +137,7 @@ async def maya_prog(callback: types.CallbackQuery):
     print(title)
     AddName.programs.append(title)
 
-
+#_________________________________________________________________________________________
 @user_router.callback_query(F.data.startswith('3DMax'))
 async def three_d_max_prog(callback: types.CallbackQuery):
     await callback.answer('Добавил в список "3DMax"')
@@ -143,7 +145,7 @@ async def three_d_max_prog(callback: types.CallbackQuery):
     print(title)
     AddName.programs.append(title)
 
-
+#_________________________________________________________________________________________
 @user_router.callback_query(F.data.startswith('Blender'))
 async def blender_prog(callback: types.CallbackQuery):
     await callback.answer('Добавил в список "Blender"')
@@ -151,6 +153,7 @@ async def blender_prog(callback: types.CallbackQuery):
     print(title)
     AddName.programs.append(title)
 
+#_________________________________________________________________________________________
 @user_router.callback_query(F.data.startswith('Cancel'))
 async def cancel_prog(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer('Отменил выбор')
@@ -178,7 +181,7 @@ async def add_programs(callback: types.CallbackQuery, state: FSMContext):
     await callback.message.answer('Напиши город проживания')
     await state.set_state(AddName.residence_city)
 
-
+#_________________________________________________________________________________________________
 @user_router.message(AddName.residence_city, or_f(F.text, F.text == '.'))
 async def add_city(message: types.Message, state: FSMContext):
     if message.text == '.' and AddName.change_prof is True:
@@ -188,7 +191,7 @@ async def add_city(message: types.Message, state: FSMContext):
     await message.answer('Вставь ссылку на Яндекс Диск с работами', reply_markup=reply.del_kb)
     await state.set_state(AddName.drive)
 
-
+#_________________________________________________________________________________________________
 @user_router.message(AddName.drive, or_f(F.text, F.text == '.'))
 async def add_drive(message: types.Message, state: FSMContext, session: AsyncSession, bot: Bot):
     if message.text == '.' and AddName.change_prof is True:
@@ -284,33 +287,30 @@ async def current_work_cmd(message: types.Message, session: AsyncSession):
     Отправка текущей работы сотруднику
     """
     user_id = message.from_user.id
-    user_work = await orm_get_user_work(session, user_id)
     user = await orm_get_one_user(session, user_id)
     if user.accept_processing is False:                   # Проверка пользовательского соглашения
         return await send_file(message)
 
     try:
-        if user_work is None:
-            await message.answer("У тебя нет текущей работы")
+        for user_work in await orm_get_one_user_works(session, user_id):
+            work = await orm_get_one_work(session, user_work.current_work)
+            if work.image is None:
+                await message.answer(
+                    f'<b>Работа</b> - {work.title}\n<b>Комментарий:</b> {work.work_comment}\n<b>Срок выполнения:</b> {work.deadline}\n<b>Оклад за работу:</b> {user_work.salary}\n<b>Твоя задача:</b> {user_work.task}'
+                )
+            else:
+                await message.answer_photo(
+                    photo=work.image,
+                    caption=
+                    f'<b>Работа</b> - {work.title}\n<b>Комментарий:</b> {work.work_comment}\n<b>Срок выполнения:</b> {work.deadline}\n<b>Ссылка на файл:</b> <a href="{work.file}"> Work Files </a>\n<b>Оклад за работу:</b> {user_work.salary}\n<b>Твоя задача:</b> {user_work.task}',
+                )
             return
         else:
-            for all_works in await orm_get_user_works(session):
-                if all_works.user_id == user_id:
-                    current_work = all_works.current_work
-                    work = await orm_get_one_work(session, current_work)
-                    if work.image is None:
-                        await message.answer(
-                            f'<b>Работа</b> - {work.title}\n<b>Комментарий:</b> {work.work_comment}\n<b>Срок выполнения:</b> {work.deadline}\n<b>Оклад за работу:</b> {all_works.salary}\n<b>Твоя задача:</b> {all_works.task}'
-                        )
-                    else:
-                        await message.answer_photo(
-                            photo=work.image,
-                            caption=
-                            f'<b>Работа</b> - {work.title}\n<b>Комментарий:</b> {work.work_comment}\n<b>Срок выполнения:</b> {work.deadline}\n<b>Ссылка на файл:</b> <a href="{work.file}"> Work Files </a>\n<b>Оклад за работу:</b> {all_works.salary}\n<b>Твоя задача:</b> {all_works.task}',
-                            parse_mode='HTML'
-                        )
+            await message.answer("У тебя нет текущей работы")
+            return
     except Exception as e:
-        await message.answer(f'Ошибка вывода работы сотрудников:\n{e}\n\nНапишите @Kic9ndr', reply_markup=reply.start_kb)
+        await message.answer(f'Ой-ой, попробуй еще раз нажать\n{e}', reply_markup=reply.start_kb)
+        # await orm_delete_user_work(session, user_work.work_id)           # Удаление работы в назначенных работах пользователя
 
 
 #####################################################################################################################################################
@@ -340,7 +340,7 @@ async def work_btns(message: types.Message, state: FSMContext, session: AsyncSes
     await message.answer("Выбери какую работу из списка отправить на проверку:", reply_markup = await choice_work_btns(session, user_id=message.from_user.id))
     await state.set_state(SendWork.choice_work)
 
-
+#_________________________________________________________________________________________________
 @user_router.callback_query(SendWork.choice_work, F.data)
 async def send_work_cmd(callback: types.CallbackQuery, state: FSMContext):
     """
@@ -355,14 +355,14 @@ async def send_work_cmd(callback: types.CallbackQuery, state: FSMContext):
     await callback.message.answer("Оставь комментарий к работе", reply_markup=reply.send_work_kb)
     await state.set_state(SendWork.comment)
 
-
+#_________________________________________________________________________________________________
 @user_router.message(SendWork.comment, F.text)
 async def send_work_comment(message: types.Message, state: FSMContext):
     await state.update_data(comment=message.text)
     await message.answer("Вставь ссылку на работу")
     await state.set_state(SendWork.work)
 
-
+#_________________________________________________________________________________________________
 @user_router.message(SendWork.work, F.text)
 async def send_work(message: types.Message, bot: Bot, state: FSMContext, session: AsyncSession):
     await state.update_data(work=message.text)
@@ -403,10 +403,12 @@ async def archive_cmd(message: types.Message, session: AsyncSession, bot: Bot):
     
     google_table = GoogleTable()
 
-    await message.answer('Пожалуйста, подождите немного')
+    await message.answer('Пожалуйста, подождите минуту')
     await bot.send_chat_action(chat_id = user.user_id, action="typing")
     works = google_table.get_user_archive(user.name)
-    print(works)
+    if works == []:
+        await message.answer('У Вас нет архивных работ\nВы можете просмотреть свои <b>текущие работы</b> написать <i>/current_work</i> или открыв свой профиль')
+
     for work in works:
         if work[-1] in 'FALSE':
             payment_status = 'Не оплачена'
@@ -420,13 +422,13 @@ async def archive_cmd(message: types.Message, session: AsyncSession, bot: Bot):
         elif current_work is not None:
             image = current_work.image
         else:
-            await message.answer('У Вас нет архивных работ\nВы можете просмотреть свои <b>текущие работы</b> написать <i>/current_work</i> или открыв свой профиль')
-            return
+            await message.answer(f"Работа - {work[0]}\nЗадача - {work[1]}\nОклад - {work[2]}\nСтатус оплаты - {payment_status}")
+            image = None
         
-        print(f"<b>Работа</b> - {work[0]}\n<b>Задача</b> - {work[1]}\n<b>Оклад<b> - {work[2]}\n<b>Статус оплаты</b> - {payment_status}")
-        await message.answer_photo(photo=image,
-            caption=f"<b>Работа</b> - {work[0]}\n<b>Задача</b> - {work[1]}\n<b>Оклад<b> - {work[2]}\n<b>Статус оплаты</b> - {payment_status}"
-        ) 
+        if image is not None:
+            await message.answer_photo(photo=image,
+                caption=f"Работа - {work[0]}\nЗадача - {work[1]}\nОклад - {work[2]}\nСтатус оплаты - {payment_status}",
+            )
 
 
 #-------------------------------------------------------------------------------------------------------
@@ -436,10 +438,11 @@ async def want_to_work(message: types.Message, bot: Bot, session: AsyncSession):
     if user.accept_processing is False:                   # Проверка пользовательского соглашения
         return await send_file(message)
 
-    admin_list = [5825144544, 5624308044]
+    sticker = random.choice(['CAACAgIAAxkBAAEM9upnDO_MXyKyN3lMiuJZDVGOZWgKjgACIWQAAjbYYUjm8Vzo9wuZ5DYE', 'CAACAgIAAxkBAAEM9uhnDO_IegTXj2FzE3sos4CrSNzhvgAC4loAAnUwaUhWCw_IhlPokzYE'])
+    admin_list = [5825144544, 5624308044, 880624724, 834162337]
     for i in admin_list:
-        await bot.send_sticker(chat_id=i, sticker='CAACAgIAAxkBAAEMsoVmydWYfGwFoazZb8ffbF3D29zF-AACIwADX93LNgABGL7i461AdjUE')
-        await bot.send_message(chat_id=i, text=f'{user.name} @{user.username} хочет поработать, нужно больше золота, нужно построить зиккурат ')
+        await bot.send_sticker(chat_id=i, sticker=sticker)
+        await bot.send_message(chat_id=i, text=f'{user.name} @{user.username}')
     await message.answer(text='Вас понял 🫡\nОтправил пожелание капитану', reply_markup=reply.start_kb)
 
 
@@ -500,6 +503,7 @@ async def my_profile2(callback: types.CallbackQuery, session: AsyncSession):
         ), disable_web_page_preview=True
     )
 
+#_________________________________________________________________________________________________
 @user_router.message(or_f(Command('my_profile'), (F.text == 'Мой профиль 🪪')))
 async def my_profile(message: types.Message, session: AsyncSession):
     user = await orm_get_one_user(session, message.from_user.id)
@@ -541,7 +545,7 @@ async def my_profile(message: types.Message, session: AsyncSession):
             }, sizes=(1, 2)
         ), disable_web_page_preview=True
     )
-
+#_________________________________________________________________________________________________
 @user_router.callback_query(F.data.startswith('go_on:'))
 async def user_skills(callback: types.CallbackQuery, session: AsyncSession):
     user_id = callback.data.split(':')[-1]
@@ -566,7 +570,7 @@ async def user_skills(callback: types.CallbackQuery, session: AsyncSession):
             }
         ),
     )
-
+#_________________________________________________________________________________________________
 @user_router.callback_query(F.data.startswith('edit_profile_'))
 async def edit_my_profile(callback: types.CallbackQuery, session: AsyncSession, state: FSMContext):
     user_id = callback.data.split('_')[-1]
@@ -579,7 +583,7 @@ async def edit_my_profile(callback: types.CallbackQuery, session: AsyncSession, 
             }
         )
     )
-
+#_________________________________________________________________________________________________
 @user_router.callback_query(F.data.startswith('role_'))
 @user_router.callback_query(F.data.startswith('edit_my_profile_'))
 async def edit_my_profile(callback: types.CallbackQuery, session: AsyncSession, state: FSMContext):
@@ -598,7 +602,7 @@ async def edit_my_profile(callback: types.CallbackQuery, session: AsyncSession, 
     AddName.for_change = for_change
     AddName.change_prof = True
 
-
+#_________________________________________________________________________________________________
 @user_router.callback_query(F.data == 'file_accept')
 async def accept_file(callback: types.CallbackQuery, session: AsyncSession):
     user_id = callback.from_user.id
@@ -609,3 +613,4 @@ async def accept_file(callback: types.CallbackQuery, session: AsyncSession):
 
     google_table = GoogleTable()
     google_table.update_accept_processing(user.name)
+#_________________________________________________________________________________________________
