@@ -144,7 +144,20 @@ async def admin(message: types.Message, state: FSMContext):
 @admin_router.message(F.text == "Списки сотрудников 📋")
 async def project_klnd(message: types.Message):
     await message.answer('Какой список тебе нужен?', reply_markup=get_callback_btns(btns={
-                'Занятые': f"busy_",
+                'На правках': f"busy_",
+                'Свободные': f'available_',
+                'Все сотрудники': f'all_',
+                }
+            )
+        )
+    
+#__________________________________________________________________________________________________
+@admin_router.callback_query(F.data == "back_list")
+async def project_klnd(callback: types.CallbackQuery):
+    await callback.answer()
+    await callback.message.delete()
+    await callback.message.answer('Какой список тебе нужен?', reply_markup=get_callback_btns(btns={
+                'На правках': f"busy_",
                 'Свободные': f'available_',
                 'Все сотрудники': f'all_',
                 }
@@ -154,22 +167,9 @@ async def project_klnd(message: types.Message):
 #-------------------------------------------------------------------------------------------------------------
 @admin_router.callback_query(F.data.startswith('busy_'))        # Занятые сотрудники
 async def all_worker(callback: types.CallbackQuery, session: AsyncSession):
+    await callback.message.delete()
     await callback.answer()
-    user_list = []
-    users = await orm_get_users_works(session)          # Получаю всех юзеров с параметром работ
-    for user in users:                                  # Вход в экземпляр юзера
-        works = await orm_get_user_work(session, user.user_id)
-        if works is None:
-            pass
-        else:
-            user_list.append(f'{user.name} @{user.username}')
-
-
-    if user_list != []:
-        await callback.message.answer('Список занятых сотрудников:', reply_markup=admin_kb)
-        await callback.message.answer('\n'.join(user_list))
-    else:
-        await callback.message.answer('Все сотрудники свободны')
+    await callback.message.answer('Список всех сотрудников:', reply_markup=await choice_busy_worker_btns(session))
 
 
 #-------------------------------------------------------------------------------------------------------------
@@ -511,7 +511,7 @@ async def create_task(message: types.Message, state: FSMContext):
     CreateTask.change_work = False
     if message.text in "Быстрая задача 🚀":
         CreateTask.quick_work = True
-    await message.answer('Введите название работы\nПри создании не используй "_" и соблюдай лимит в 24 символа', reply_markup=reply.admin_nav)
+    await message.answer('Введите название работы', reply_markup=reply.admin_nav)
     await state.set_state(CreateTask.title)
 
 
@@ -538,6 +538,10 @@ async def back_step_handler(message: types.Message, state: FSMContext) -> None:
 
 @admin_router.message(CreateTask.title, or_f(F.text, F.text == '.'))
 async def set_title(message: types.Message, state: FSMContext):
+    if len(message.text) > 26: 
+        await message.answer('<b>Передумай</b>. <u>Название не должно превышать 26-ти символов</u>')
+        return await create_task(message, state)
+    
     if message.text == '.' and CreateTask.change_work is True:
         await state.update_data(title=CreateTask.title_for_change.title)
     else:
@@ -603,6 +607,7 @@ async def set_deadline(message: types.Message, state: FSMContext, session: Async
     await message.answer("Введите название файла: ")
     await state.set_state(CreateTask.file_name)
 
+#______________________________________________________________________________________________________________________
 @admin_router.message(CreateTask.deadline)
 async def set_deadline2(message: types.Message, state: FSMContext):
     await message.answer("Ввели данные неверно. Необходимо написать число ")
@@ -1181,3 +1186,4 @@ async def send_new_project(message: types.Message, state: FSMContext, bot: Bot):
 
     await state.clear()
     await message.answer('Отправил файлы', reply_markup=reply.admin_kb)
+

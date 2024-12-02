@@ -225,6 +225,12 @@ async def orm_get_one_user_works2(session: AsyncSession, work: str):
     return result.scalars().all()
 
 
+async def orm_get_one_user_works3(session: AsyncSession):
+    query = select(UserWork).where(UserWork.edits != None)
+    result = await session.execute(query)
+    return result.scalars().all()
+
+
 async def orm_get_user_work(session: AsyncSession, user_id: int):
     query = select(UserWork).where(UserWork.user_id == user_id)
     result = await session.execute(query)
@@ -236,6 +242,26 @@ async def orm_update_user_status(session: AsyncSession, user_id: int, new_value:
         update(UserWork)
         .where(UserWork.user_id == user_id)
         .values(check_work=new_value)
+    )
+    await session.execute(query)
+    await session.commit()
+
+
+async def orm_update_user_date(session: AsyncSession, id: int, new_value: str):
+    query = (
+        update(UserWork)
+        .where(UserWork.work_id == id)
+        .values(edits=new_value)
+    )
+    await session.execute(query)
+    await session.commit()
+
+
+async def orm_delete_user_date(session: AsyncSession, id: int):
+    query = (
+        update(UserWork)
+        .where(UserWork.work_id == id)
+        .values(edits=None)
     )
     await session.execute(query)
     await session.commit()

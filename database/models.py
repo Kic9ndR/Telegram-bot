@@ -46,6 +46,7 @@ class UserWork(Base):
     task: Mapped[str] = mapped_column(String(150), unique=False)
     salary: Mapped[int] = mapped_column(String(150), unique=False)
     check_work: Mapped[bool] = mapped_column(unique=False)
+    edits: Mapped[DateTime] = mapped_column(DateTime, default=None, nullable=True)
     
     user: Mapped["UserID"] = relationship(back_populates="work")
 

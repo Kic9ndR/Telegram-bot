@@ -1,5 +1,6 @@
 import asyncio
 import os
+from datetime import datetime
 from sre_parse import State
 from aiogram import F, Bot, types, Router
 from aiogram.filters import Command, StateFilter
@@ -134,7 +135,7 @@ async def send_edits(callback: types.CallbackQuery, state: FSMContext, bot: Bot)
     await callback.answer()
     msg = await callback.message.answer('Загрузите файл', reply_to_message_id=SendWork.message_id, reply_markup=reply.cancel)
 
-    await asyncio.sleep(30)
+    await asyncio.sleep(60)
     await bot.delete_message(chat_id=int(admin_chat), message_id=msg.message_id)
     await state.clear()
 
@@ -148,8 +149,7 @@ async def add_doc(message: types.Message, bot: Bot, state: FSMContext, session: 
     try:
         data = await state.get_data()
         file = data['doc']
-        user = data['user_name']
-        await bot.send_document(chat_id=user, document=file.file_id, caption=
+        await bot.send_document(chat_id=int(SendWork.user_id), document=file.file_id, caption=
                             f'Вам отправили правки по вашей работе -- {SendWork.work_title}')
         await message.answer(text="Отправил правки", reply_to_message_id=SendWork.message_id, reply_markup=reply.del_kb)
     except Exception as e:
@@ -169,6 +169,8 @@ async def add_doc(message: types.Message, bot: Bot, state: FSMContext, session: 
                 disable_web_page_preview=True,
             )
             await orm_delete_id_message(session, i.id)
+
+    await orm_update_user_date(session, i.work_id, datetime(datetime.now().year, datetime.now().month, datetime.now().day, datetime.now().hour))
 
     await state.clear()
     # Отправка нового статуса в GoogleSheet

@@ -304,13 +304,11 @@ async def current_work_cmd(message: types.Message, session: AsyncSession):
                     caption=
                     f'<b>Работа</b> - {work.title}\n<b>Комментарий:</b> {work.work_comment}\n<b>Срок выполнения:</b> {work.deadline}\n<b>Ссылка на файл:</b> <a href="{work.file}"> Work Files </a>\n<b>Оклад за работу:</b> {user_work.salary}\n<b>Твоя задача:</b> {user_work.task}',
                 )
-            return
         else:
             await message.answer("У тебя нет текущей работы")
             return
     except Exception as e:
         await message.answer(f'Ой-ой, попробуй еще раз нажать\n{e}', reply_markup=reply.start_kb)
-        # await orm_delete_user_work(session, user_work.work_id)           # Удаление работы в назначенных работах пользователя
 
 
 #####################################################################################################################################################
@@ -391,7 +389,8 @@ async def send_work(message: types.Message, bot: Bot, state: FSMContext, session
             work_id=work_id
         )
     
-    await orm_update_user_status(session, user.user_id, True)     # Изменение статуса проверки на "Проверка" в базе данных
+    await orm_update_user_status(session, user.user_id, True)       # Изменение статуса проверки на "Проверка" в базе данных
+    await orm_delete_user_date(session, work_id)                    # Убрать время отправки правок
     
 
 #-------------------------------------------------------------------------------------------------------
