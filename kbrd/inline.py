@@ -4,6 +4,7 @@ from aiogram.filters.callback_data import CallbackData
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from common.teams_list import teams_list
 from database.orm_query import *
 
 
@@ -54,19 +55,87 @@ def get_inlineMix_btns(
     return keyboard.adjust(*sizes).as_markup()
 
 
+##################################################################################################################
+async def captain_works(
+        session: AsyncSession,
+        user_id: int,
+        sizes = (2,2),
+    ):
+    
+    keyboard = InlineKeyboardBuilder()
+
+    for work in await orm_get_one_user_works(session, user_id):
+        keyboard.add(InlineKeyboardButton(text=f'{work.current_work}', callback_data=f"distribute_{work.current_work}"))
+
+    return keyboard.adjust(*sizes).as_markup()
+
+
+##################################################################################################################
+async def choice_team(
+        session: AsyncSession,
+        sizes = (2, 2) 
+    ):
+
+    keyboard = InlineKeyboardBuilder()
+
+    for team in await teams_list(session):
+        keyboard.add(InlineKeyboardButton(text=f'{team}', callback_data=f'{team}'))
+
+    keyboard.adjust(*sizes)
+
+    buttons_row = []
+    buttons_row.append(InlineKeyboardButton(text=f'Выбрать сотрудника', callback_data='switch_kbrd'))
+
+    keyboard.adjust(*sizes)
+
+    return keyboard.row(*buttons_row).as_markup()
 
 ##################################################################################################################
 
-class ChoiceWorker(CallbackData, prefix="Worker"):
+class AllWorkers(CallbackData, prefix="Worker"):
     action: str                                 # Вперед и назад для кнопок навигации
     page: int = 0                               # Страница с работниками
+    category: str = None
 
 # Выбор сотрудника
 async def choice_worker_btns(
         session: AsyncSession,
         sizes = (1,2,),
         page: int = 0,
-        ):
+        category = 'worker_skills'
+    ):
+    
+    keyboard = InlineKeyboardBuilder()
+    start_offset = page * 12
+    limit = 12
+    end_offset = start_offset + limit
+    user_info = await orm_get_users(session)
+
+    keyboard.add(InlineKeyboardButton(text=f"Страница {page + 1}", callback_data='page'))  # Добавление кнопки "страница"
+    for worker in user_info[start_offset:end_offset]:
+        keyboard.add(InlineKeyboardButton(text=f'{worker.name}', callback_data=f"{worker.name} @{worker.username}"))
+        
+    keyboard.adjust(*sizes)
+
+    print(category)
+    buttons_row = []                                        # Создание списка кнопок
+    if page > 0:                                            # Проверка, что страница не первая
+        buttons_row.append(InlineKeyboardButton(text="⬅️", callback_data=AllWorkers(action="prev", page=page - 1, category=category).pack()))  # Добавление кнопки "назад"
+    buttons_row.append(InlineKeyboardButton(text=f"↩️", callback_data='back_list'))  # Добавление кнопки "вернуться"
+    if end_offset < len(user_info):                         # Проверка, что ещё есть пользователи для следующей страницы
+        buttons_row.append(InlineKeyboardButton(text="➡️", callback_data=AllWorkers(action="next", page=page + 1, category=category).pack()))  # Добавление кнопки "вперед"
+
+    keyboard.adjust(*sizes)
+
+    return keyboard.row(*buttons_row).as_markup()
+
+#__________________________________________________________________________________________________________________________________________
+async def choice_worker_btns2(
+        session: AsyncSession,
+        sizes = (1,2,),
+        page: int = 0,
+        category = 'choice_worker'
+    ):
 
     keyboard = InlineKeyboardBuilder()
     start_offset = page * 12
@@ -80,12 +149,51 @@ async def choice_worker_btns(
         
     keyboard.adjust(*sizes)
 
+    print(category)
     buttons_row = []                                        # Создание списка кнопок
     if page > 0:                                            # Проверка, что страница не первая
-        buttons_row.append(InlineKeyboardButton(text="⬅️", callback_data=ChoiceWorker(action="prev", page=page - 1).pack()))  # Добавление кнопки "назад"
-    buttons_row.append(InlineKeyboardButton(text=f"↩️", callback_data='back_list'))  # Добавление кнопки "вернуться"
+        buttons_row.append(InlineKeyboardButton(text="⬅️", callback_data=AllWorkers(action="prev", page=page - 1, category=category).pack()))  # Добавление кнопки "назад"
+    buttons_row.append(InlineKeyboardButton(text=f"Команды ⤴️", callback_data='back_to_teams'))  # Вернуться к выбору команды
+    buttons_row.append(InlineKeyboardButton(text=f"Вписать сотрудника ✍️", callback_data='add_emp'))  # Написать имя сотрудника вручную
     if end_offset < len(user_info):                         # Проверка, что ещё есть пользователи для следующей страницы
-        buttons_row.append(InlineKeyboardButton(text="➡️", callback_data=ChoiceWorker(action="next", page=page + 1).pack()))  # Добавление кнопки "вперед"
+        buttons_row.append(InlineKeyboardButton(text="➡️", callback_data=AllWorkers(action="next", page=page + 1, category=category).pack()))  # Добавление кнопки "вперед"
+
+    keyboard.adjust(*sizes)
+
+    return keyboard.row(*buttons_row).as_markup()
+
+#__________________________________________________________________________________________________________________________________________
+class ChoiceWorkers(CallbackData, prefix="Workers"):
+    action: str                                 # Вперед и назад для кнопок навигации
+    page: int = 0                               # Страница с работниками
+
+# Выбор сотрудников
+async def choice_workers_btns(
+        session: AsyncSession,
+        sizes = (1,2,),
+        page: int = 0,
+        category = 'several_emp'
+    ):
+
+    keyboard = InlineKeyboardBuilder()
+    start_offset = page * 12
+    limit = 12
+    end_offset = start_offset + limit
+    user_info = await orm_get_users(session)
+
+    keyboard.add(InlineKeyboardButton(text=f"Страница {page + 1}", callback_data='page'))  # Добавление кнопки "страница"
+    for worker in user_info[start_offset:end_offset]:
+        keyboard.add(InlineKeyboardButton(text=f'{worker.name}', callback_data=f"worker_{worker.name}"))
+        
+    keyboard.adjust(*sizes)
+
+    print(category)
+    buttons_row = []                                        # Создание списка кнопок
+    if page > 0:                                            # Проверка, что страница не первая
+        buttons_row.append(InlineKeyboardButton(text="⬅️", callback_data=AllWorkers(action="prev", page=page - 1, category=category).pack()))  # Добавление кнопки "назад"
+    buttons_row.append(InlineKeyboardButton(text=f"Продолжить ⏭️", callback_data='continue'))  # Добавление кнопки вперед
+    if end_offset < len(user_info):                         # Проверка, что ещё есть пользователи для следующей страницы
+        buttons_row.append(InlineKeyboardButton(text="➡️", callback_data=AllWorkers(action="next", page=page + 1, category=category).pack()))  # Добавление кнопки "вперед"
 
     keyboard.adjust(*sizes)
 
@@ -120,10 +228,10 @@ async def choice_busy_worker_btns(
 
         buttons_row = []                                        # Создание списка кнопок
         if page > 0:                                            # Проверка, что страница не первая
-            buttons_row.append(InlineKeyboardButton(text="⬅️", callback_data=ChoiceWorker(action="prev", page=page - 1).pack()))  # Добавление кнопки "назад" Добавление кнопки "назад"
+            buttons_row.append(InlineKeyboardButton(text="⬅️", callback_data=AllWorkers(action="prev", page=page - 1).pack()))  # Добавление кнопки "назад" Добавление кнопки "назад"
         buttons_row.append(InlineKeyboardButton(text=f"↩️", callback_data='back_list'))  # Добавление кнопки "вернуться"
         if end_offset < len(user_info):                    # Проверка, что ещё есть пользователи для следующей страницы
-            buttons_row.append(InlineKeyboardButton(text="➡️", callback_data=ChoiceWorker(action="next", page=page + 1).pack()))  # Добавление кнопки "вперед"
+            buttons_row.append(InlineKeyboardButton(text="➡️", callback_data=AllWorkers(action="next", page=page + 1).pack()))  # Добавление кнопки "вперед"
         
         keyboard.adjust(*sizes)
 
@@ -136,23 +244,24 @@ async def choice_work_btns(
         session: AsyncSession,
         user_id: int,
         sizes = (2,),
-        ):
-
+    ):
     
     keyboard = InlineKeyboardBuilder()
-    works = await orm_get_user_works(session)
 
-    for work in works:
+    for work in await orm_get_user_works(session):
         if int(work.user_id) == int(user_id):
             keyboard.add(InlineKeyboardButton(text=
                     f'{work.current_work}', callback_data=f"{work.current_work}_{work.work_id}")
             )
-    else:
-        keyboard.add(InlineKeyboardButton(text=
-                f'Сами разберутся', callback_data=f"nothing_")
+
+            keyboard.adjust(*sizes)
+
+    buttons_row = []  
+    buttons_row.append(InlineKeyboardButton(text=
+                f'Нет работы в списке', callback_data=f"nothing_")
         )
 
-    return keyboard.adjust(*sizes).as_markup()
+    return keyboard.row(*buttons_row).as_markup()
 
 
 ####################################### Создание клавиатуры для выбора работы #######################################

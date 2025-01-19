@@ -13,6 +13,7 @@ class Work(Base):
     title: Mapped[str] = mapped_column(String(150), unique=True, primary_key=True)
     work_comment: Mapped[str] = mapped_column(String(150), unique=False, nullable=True)
     deadline: Mapped[str] = mapped_column(unique=False, nullable=False)
+    complexity: Mapped[str] = mapped_column(unique=False, nullable=True)
     file_name: Mapped[str] = mapped_column(String(150), unique=False, nullable=True)
     file: Mapped[str] = mapped_column(String(150), unique=False, nullable=True)
     worker_name: Mapped[str] = mapped_column(unique=False, nullable=True)
@@ -103,3 +104,14 @@ class PublishedWorks(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[str] = mapped_column(String(150), unique=False, nullable=True)
+
+
+###################################################################################################################
+
+class EmpTeam(Base):
+    __tablename__ = 'team of employees'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(150), nullable=False)
+    captain: Mapped[bool] = mapped_column(nullable=True, unique=False)
+    team_name: Mapped[str] = mapped_column(String(150), nullable=False)

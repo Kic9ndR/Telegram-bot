@@ -33,14 +33,14 @@ class SendUsers(StatesGroup):
     message = ''
     doc = None
 
-
+#_________________________________________________________________________________________________
 # Рассылка пользователям информации
 @admin_router.message(StateFilter(None), Command("send_users"))
 async def send_to_users(message: types.Message, state: FSMContext):
     await message.answer('Напишите сообщение для <b>Всех</b> пользователей или вставьте файл', reply_markup=reply.admin_nav)
     await state.set_state(SendUsers.confirm)
 
-
+#_________________________________________________________________________________________________
 @admin_router.message(SendUsers.confirm)
 async def send_to_users(message: types.Message, state: FSMContext):
     if message.text:
@@ -63,7 +63,7 @@ async def send_to_users(message: types.Message, state: FSMContext):
         )
     await state.set_state(SendUsers.sending)
 
-
+#_________________________________________________________________________________________________
 @admin_router.callback_query(SendUsers.sending, F.data)
 async def send_to_users(callback: types.CallbackQuery, session: AsyncSession, bot: Bot, state: FSMContext):
     await callback.message.delete()
@@ -96,10 +96,12 @@ async def send_to_users(callback: types.CallbackQuery, session: AsyncSession, bo
         await state.set_state(SendUsers.confirm)
 
 
+###################################################################################################
 class CreateTask(StatesGroup):
     title = State()
     work_comment = State()
     deadline = State()
+    complexity = State()
     file_name = State()
     file = State()
     image = State()
@@ -114,12 +116,13 @@ class CreateTask(StatesGroup):
         'CreateTask:title': 'Введите работы повторно: ',
         'CreateTask:work_comment': 'Введите комментарий повторно: ',
         'CreateTask:deadline': 'Введите срок выполнения повторно: ',
+        'CreateTask:complexity': 'Введите сложность работы повторно: ',
         'CreateTask:file_name': 'Введите названия файла повторно: ',
         'CreateTask:file': 'Отправьте ссылку повторно: ', 
         'CreateTask:image': 'Загрузите фото повторно: ',
     }
 
-
+#_________________________________________________________________________________________________
 @admin_router.message(StateFilter('*'), Command("отмена"))
 @admin_router.message(StateFilter('*'), F.text.casefold() == "отмена")
 async def cancel_handler(message: types.Message, state: FSMContext) -> None:
@@ -131,13 +134,14 @@ async def cancel_handler(message: types.Message, state: FSMContext) -> None:
     await state.clear()
     await message.answer("Действия отменены", reply_markup=admin_kb)
 
-#---------------------------------------------------------------------------------- 
+#_________________________________________________________________________________________________
 @admin_router.message(Command("admin"))
 async def admin(message: types.Message, state: FSMContext):
     await state.clear()
     await message.answer("Что хотите сделать?", reply_markup=admin_kb)
 
 
+#_________________________________________________________________________________________________
 """
 Кнопки для списка сотрудников =====================================================================
 """
@@ -164,15 +168,15 @@ async def project_klnd(callback: types.CallbackQuery):
             )
         )
 
-#-------------------------------------------------------------------------------------------------------------
-@admin_router.callback_query(F.data.startswith('busy_'))        # Занятые сотрудники
+#_________________________________________________________________________________________________
+@admin_router.callback_query(F.data.startswith('busy_'))        # На правках дольше 24 ч
 async def all_worker(callback: types.CallbackQuery, session: AsyncSession):
     await callback.message.delete()
     await callback.answer()
-    await callback.message.answer('Список всех сотрудников:', reply_markup=await choice_busy_worker_btns(session))
+    await callback.message.answer('Сотрудники на правках дольше 24 часов', reply_markup=await choice_busy_worker_btns(session))
 
 
-#-------------------------------------------------------------------------------------------------------------
+#_________________________________________________________________________________________________
 @admin_router.callback_query(F.data.startswith('available_'))       # Свободные сотрудники
 async def all_worker(callback: types.CallbackQuery, session: AsyncSession):
     await callback.answer()
@@ -184,24 +188,23 @@ async def all_worker(callback: types.CallbackQuery, session: AsyncSession):
             user_list.append(f'{user.name} @{user.username}')
 
     if user_list != []:
-        await callback.message.answer('Список свободных сотрудников:', reply_markup=admin_kb)
+        await callback.message.answer('Список свободных сотрудников', reply_markup=admin_kb)
         await callback.message.answer('\n'.join(user_list))
     else:
         await callback.message.answer('Все сотрудники заняты')
 
 
-#-------------------------------------------------------------------------------------------------------------
+#_________________________________________________________________________________________________
 @admin_router.callback_query(F.data.startswith('all_'))              # Все сотрудники сотрудники
 async def all_worker(callback: types.CallbackQuery, session: AsyncSession):
     await callback.message.delete()
     await callback.answer()
-    await callback.message.answer('Список всех сотрудников:', reply_markup=await choice_worker_btns(session))
+    await callback.message.answer('Список всех сотрудников', reply_markup=await choice_worker_btns(session))
 
-
+#_________________________________________________________________________________________________
 """
 Получение таблицу сотрудников с google sheets =====================================================
 """
-
 @admin_router.message(F.text == "Таблицы 𝄜")
 async def task_distrib(message: types.Message):
     await message.answer('Список всех таблиц:', reply_markup=get_url_btns(
@@ -213,6 +216,7 @@ async def task_distrib(message: types.Message):
         )
     )
 
+#__________________________________________________________________________________________________
 """
 Кнопки для выбора работы ==========================================================================
 """
@@ -230,6 +234,7 @@ async def project_list(message: types.Message, bot: Bot):
         ), parse_mode='HTML'
     )
 
+#_________________________________________________________________________________________________
 # Опубликованный список работ
 @admin_router.callback_query(F.data == ('realized'))
 async def realized_list(callback: types.CallbackQuery, session: AsyncSession):
@@ -241,6 +246,7 @@ async def realized_list(callback: types.CallbackQuery, session: AsyncSession):
                             )
                     )
 
+#_________________________________________________________________________________________________
 # Список в процессе создания работы
 @admin_router.callback_query(F.data == ('process'))
 async def process_of_creation(callback: types.CallbackQuery, session: AsyncSession, bot: Bot):
@@ -253,6 +259,7 @@ async def process_of_creation(callback: types.CallbackQuery, session: AsyncSessi
                             )
                     )
 
+#_________________________________________________________________________________________________
 @admin_router.callback_query(F.data.startswith('work_'))
 async def get_work(callback: types.CallbackQuery, session: AsyncSession, bot: Bot):
     await bot.send_chat_action(chat_id=callback.from_user.id, action='typing')
@@ -262,7 +269,7 @@ async def get_work(callback: types.CallbackQuery, session: AsyncSession, bot: Bo
 
     await work_output(callback, session, work)                  # Вывод работы
 
-
+#_________________________________________________________________________________________________
 @admin_router.callback_query(F.data == 'comeback')
 async def comeback_work(callback: types.CallbackQuery, session: AsyncSession):
     await callback.answer()
@@ -277,6 +284,7 @@ async def comeback_work(callback: types.CallbackQuery, session: AsyncSession):
             }, sizes={1, 1, 1}
         ), parse_mode='HTML'
     )
+
 #_____________________________________________________________________________________________________________
 @admin_router.callback_query(ChoiceWork.filter())
 async def work_pagination_handler(call: types.CallbackQuery, callback_data: ChoiceWork, session: AsyncSession):
@@ -287,13 +295,21 @@ async def work_pagination_handler(call: types.CallbackQuery, callback_data: Choi
     await call.message.edit_reply_markup(reply_markup=await choice_works_btns(session, page=page, category=category))  # Обновление клавиатуры при нажатии кнопок навигации
 
 #_____________________________________________________________________________________________________________
-@admin_router.callback_query(ChoiceWorker.filter())
-async def worker_pagination_handler(call: types.CallbackQuery, callback_data: ChoiceWorker, session: AsyncSession):
+@admin_router.callback_query(AllWorkers.filter())
+async def worker_pagination_handler(call: types.CallbackQuery, callback_data: AllWorkers, session: AsyncSession):
     """ Навигация для списка сотрудников """
     page = callback_data.page
-    await call.answer()
-    await call.message.edit_reply_markup(reply_markup=await choice_worker_btns(session, page=page))  # Обновление клавиатуры при нажатии кнопок навигации
+    category = callback_data.category
 
+    await call.answer()
+    if category == "worker_skills":
+        await call.message.edit_reply_markup(reply_markup=await choice_worker_btns(session, page=page))  # Обновление клавиатуры при нажатии кнопок навигации
+    elif category == 'choice_worker':
+        await call.message.edit_reply_markup(reply_markup=await choice_worker_btns2(session, page=page))  # Обновление клавиатуры при нажатии кнопок навигации
+    elif category == 'several_emp':
+        await call.message.edit_reply_markup(reply_markup=await choice_workers_btns(session, page=page))  # Обновление клавиатуры при нажатии кнопок навигации        
+
+#_________________________________________________________________________________________________
 """
 Отправка работы в архив ===========================================================================
 """
@@ -338,6 +354,7 @@ async def send_work_archive(callback: types.CallbackQuery, session: AsyncSession
             await bot.delete_message(chat_id=int(user_chat), message_id=i.id)
             await orm_delete_id_send_work(session, i.id)
 
+#_________________________________________________________________________________________________
 """
 Получение работ из архива =======================================================================================================================================
 """
@@ -350,7 +367,7 @@ async def archive_cmd(callback: types.CallbackQuery, session: AsyncSession):
                                 session=session, category='archive'
                             )
                     )
-    
+#_________________________________________________________________________________________________
 @admin_router.callback_query(F.data.startswith('archive_'))
 async def archive_work(callback: types.CallbackQuery, session: AsyncSession):
     work = callback.data.split('_')[-1]
@@ -361,6 +378,7 @@ async def archive_work(callback: types.CallbackQuery, session: AsyncSession):
             caption=f'{title.title}\n<b>Комментарий</b>: {title.work_comment}\n<b>Срок выполнения:</b> {title.deadline}\n<b>Ссылка на файл:</b> <a href="{title.file}"> Work Files </a>\n<b>Назначены:</b>\n{title.worker_name}',
     )
     
+###################################################################################################
 """
 Удаление работы ===================================================================================================================================================
 """
@@ -368,7 +386,7 @@ class DeleteWork(StatesGroup):
     title_id = State()
     approve = State()
 
-
+#_________________________________________________________________________________________________
 @admin_router.callback_query(StateFilter(None), F.data.startswith('delete_'))
 async def change_work(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer()
@@ -378,7 +396,7 @@ async def change_work(callback: types.CallbackQuery, state: FSMContext):
     await callback.message.answer('Вы уверены что хотите удалить работу?\n(Да или Нет)')
     await state.set_state(DeleteWork.approve)
 
-
+#_________________________________________________________________________________________________
 @admin_router.message(DeleteWork.approve, F.text)
 async def change_work(message: types.Message, session: AsyncSession, state: FSMContext, bot: Bot):
     await state.update_data(approve=message.text)
@@ -406,6 +424,7 @@ async def change_work(message: types.Message, session: AsyncSession, state: FSMC
 
     await state.clear()
 
+#_________________________________________________________________________________________________
 """
 Отправка работы в группу и назначенным сотрудникам ================================================
 """
@@ -430,6 +449,7 @@ async def send_work(callback: types.CallbackQuery, session: AsyncSession, bot: B
     await callback.answer()
     await callback.message.answer('Работа отправлена!')
 
+#_________________________________________________________________________________________________
 """
 Вход в состояние изменения работы =================================================================
 """
@@ -446,7 +466,7 @@ async def select_work(callback: types.CallbackQuery, state: FSMContext, session:
             }, sizes=(1,1)
         )
     )
-
+#__________________________________________________________________________________________________
 @admin_router.callback_query(StateFilter(None), F.data.startswith('change_'))
 async def change_work(callback: types.CallbackQuery, state: FSMContext, session: AsyncSession):
     title = callback.data.split('_')[-1]
@@ -470,7 +490,7 @@ async def change_work(callback: types.CallbackQuery, state: FSMContext, session:
                                   )
         await state.set_state(CreateTask.worker_name)
 
-
+#__________________________________________________________________________________________________
 @admin_router.callback_query(CreateTask.worker_name, F.data)
 async def change_work(callback: types.CallbackQuery, state: FSMContext, session: AsyncSession, bot: Bot):
     answer = callback.data
@@ -535,7 +555,6 @@ async def back_step_handler(message: types.Message, state: FSMContext) -> None:
         previous = step
 
 ################################################ Ввод улицы ################################################
-
 @admin_router.message(CreateTask.title, or_f(F.text, F.text == '.'))
 async def set_title(message: types.Message, state: FSMContext):
     if len(message.text) > 26: 
@@ -555,7 +574,6 @@ async def set_title2(message: types.Message, state: FSMContext):
     await message.answer("Ввели данные неверно. Необходимо написать текст ")
 
 ################################################ Комментарий к работе ################################################
-
 @admin_router.message(CreateTask.work_comment, or_f(F.text, F.text == '.'))
 async def set_work_comment(message: types.Message, state: FSMContext):
     if message.text == '.' and CreateTask.change_work is True:
@@ -570,7 +588,6 @@ async def set_work_comment2(message: types.Message):
     await message.answer("Ввели данные неверно. Необходимо написать комментарий или -")
 
 ################################################ Ввод срока выполнения ################################################
-
 @admin_router.message(CreateTask.deadline, or_f(F.text, F.text == '.'))
 async def set_deadline(message: types.Message, state: FSMContext, session: AsyncSession):
     if message.text == '.' and CreateTask.change_work is True:
@@ -604,17 +621,42 @@ async def set_deadline(message: types.Message, state: FSMContext, session: Async
         return
     else:
         await state.update_data(deadline=message.text)
+    await message.answer("Введите сложность работы от 1 до 6")
+    await state.set_state(CreateTask.complexity)
+
+#______________________________________________________________________________________________________________________
+@admin_router.message(CreateTask.deadline)
+async def set_deadline2(message: types.Message):
+    await message.answer("Ввели данные неверно. Необходимо написать число ")
+
+
+################################################ Ввод сложности работы ################################################
+@admin_router.message(CreateTask.complexity, or_f(F.text, F.text == '.'))
+async def set_complexity(message: types.Message, state: FSMContext):
+    complexity = message.text
+    if int(complexity) > 6 or int(complexity) < 1:
+        await message.answer('Уровень сложность выставляется от 1 до 6\nНапиши сложность повторно ⬇️⬇️⬇️')
+        return await state.set_state(CreateTask.complexity)
+
+    if int(complexity) == 6:
+        difficulty_lvl = '🆘🆘🆘🆘🆘🆘'
+    else:
+        difficulty_lvl = '⭐️' * int(complexity)
+
+    if message.text == '.' and CreateTask.change_work is True:
+        await state.update_data(complexity=CreateTask.title_for_change.complexity)
+    else:
+        await state.update_data(complexity=difficulty_lvl)
     await message.answer("Введите название файла: ")
     await state.set_state(CreateTask.file_name)
 
 #______________________________________________________________________________________________________________________
-@admin_router.message(CreateTask.deadline)
-async def set_deadline2(message: types.Message, state: FSMContext):
-    await message.answer("Ввели данные неверно. Необходимо написать число ")
+@admin_router.message(CreateTask.complexity)
+async def set_complexity(message: types.Message):
+    await message.answer("Ввели данные неверно.\nНеобходимо выбрать уровень сложности")
 
 
 ################################################ Ввод названия файла ################################################
-
 @admin_router.message(CreateTask.file_name, or_f(F.text, F.text == '.'))
 async def set_file_name(message: types.Message, state: FSMContext):
     if message.text == '.' and CreateTask.change_work is True:
@@ -624,13 +666,13 @@ async def set_file_name(message: types.Message, state: FSMContext):
     await message.answer("Добавьте ссылку на рабочие файлы ")
     await state.set_state(CreateTask.file)
 
+#______________________________________________________________________________________________________________________
 @admin_router.message(CreateTask.file_name)
 async def set_file_name2(message: types.Message):
     await message.answer("Ввели данные неверно.\nНеобходимо добавить ссылку на рабочие файлы")
 
 
 ################################################ Ввод файла ################################################
-
 @admin_router.message(CreateTask.file, or_f(F.text, F.text == '.'))
 async def set_file(message: types.Message, state: FSMContext):
     if message.text == '.' and CreateTask.change_work is True:
@@ -640,14 +682,13 @@ async def set_file(message: types.Message, state: FSMContext):
     await message.answer("Загрузите фото обложки задачи")
     await state.set_state(CreateTask.image)
 
-
+#______________________________________________________________________________________________________________________
 @admin_router.message(CreateTask.file)
 async def set_file2(message: types.Message):
     await message.answer("Ввели данные неверно.\nНеобходимо загрузить фото обложки задачи ")
 
 
 ################################################ Загрузка фото ################################################
-
 @admin_router.message(CreateTask.image, or_f(F.photo, F.text == '.'))
 async def add_image(message: types.Message, state: FSMContext, session: AsyncSession, bot: Bot):
     if message.text == '.' and CreateTask.change_work is True:
@@ -656,18 +697,20 @@ async def add_image(message: types.Message, state: FSMContext, session: AsyncSes
         await state.update_data(image=message.photo[-1].file_id)
     data = await state.get_data()
     title_id = data['title']
+    print(data)
 
     try:
-        if CreateTask.change_work == True:      # Если работа была обновлена, то:
+        if CreateTask.change_work == True:          # Если работа была обновлена, то:
             await orm_update_work(session, CreateTask.title_for_change.title, data)
             await orm_update_user_work(session, CreateTask.title_for_change.title, data['title'])
             await message.answer("Задача обновлена!", reply_markup=admin_kb)
         else:
             await orm_add_work(
-                session, 
+                session,
                 title=data['title'],
                 work_comment=data['work_comment'],
                 deadline=data['deadline'],
+                complexity=data['complexity'],
                 file_name=data['file_name'],
                 file=data['file'],
                 worker_name=None,
@@ -678,9 +721,9 @@ async def add_image(message: types.Message, state: FSMContext, session: AsyncSes
     except Exception as e:
         session.rollback()
         await message.answer(
-            f"Ошибка: \n{str(e)}\nОбратись к программеру",
-            reply_markup=admin_kb,
-        )
+                f"Ошибка: \n{str(e)}\nОбратись к программеру",
+                reply_markup=admin_kb,
+            )
 
     await state.clear()
 
@@ -773,21 +816,43 @@ async def add_task(message: types.Message, state: FSMContext):
 async def add_salary(message: types.Message, state: FSMContext, session: AsyncSession):
     await state.update_data(salary=message.text)
     await state.set_state(ChoiceWorker.name)
-    await message.answer('Выберите сотрудника:', reply_markup = await choice_worker_btns(session))
+    await message.answer('Выберите команду', reply_markup = await choice_team(session))
+    # await message.answer('Выберите сотрудника:', reply_markup = await choice_worker_btns(session))
+
+#________________________________________________________________________________________________________________________________
+@admin_router.callback_query(F.data == 'switch_kbrd')
+async def choice_epm(callback: types.CallbackQuery, session: AsyncSession):
+    await callback.message.edit_reply_markup(reply_markup=await choice_worker_btns2(session))
+
+#________________________________________________________________________________________________________________________________
+@admin_router.callback_query(F.data == 'add_emp')
+async def write_emp(callback: types.CallbackQuery, state: FSMContext):
+    await callback.answer()
+    await callback.message.delete()
+    await callback.message.answer('Напиши <i>имя сотрудника</i>')
+    await state.set_state(ChoiceWorker.name)
+
+#________________________________________________________________________________________________________________________________
+@admin_router.callback_query(F.data == 'back_to_teams')
+async def back_to_team(callback: types.CallbackQuery, session: AsyncSession):
+    await callback.message.edit_reply_markup(reply_markup=await choice_team(session))
 
 
 ################################################ Распределение работы ################################################
-
 @admin_router.callback_query(ChoiceWorker.name, F.data)
 async def add_name(callback: types.CallbackQuery, state: FSMContext, session: AsyncSession, bot: Bot):
-    callback.message.delete()
+    await callback.message.delete()
     await state.update_data(name=callback.data)
     data = await state.get_data()
+    await state.clear()
+
     title_id = data['work_id']
-    task_and_name = str(f"🫡  {data['task']} - {data['name']}")
     name = data['name'].split(' @')[0]
     salary = data['salary']
     task = data['task']
+    cap = await orm_get_team_captain(session, name)
+    
+    task_and_name = str(f"🫡 {data['task']} - {data['name']}")
 
     before_added = await orm_get_one_work(session, title_id)
     for users in await orm_get_users(session):
@@ -795,30 +860,34 @@ async def add_name(callback: types.CallbackQuery, state: FSMContext, session: As
             user = users.user_id
             user_info = users
             
-    try:
-        for i in await orm_get_users(session):      # Назначаем работу на сотрудника
-            if i.name in data['name']:
-                await orm_add_user_work(
-                    session,
-                    user_id=user,
-                    current_work=title_id,
-                    task=task,
-                    salary=salary,
-                    check_work=False
-                )
+    if cap is not None:
+        await bot.send_message(chat_id=cap.id, text='Вашей команде назначена новая работа\nДля распределения задач напишите /my_team')
+        await orm_add_user_work(
+            session,
+            user_id=cap.id,
+            current_work=title_id,
+            task=task,
+            salary='-',
+            check_work=False
+        )
+    else:
+        user_info = await orm_get_user_name(session, data['name'])
+        await bot.send_message(chat_id=user_info.user_id, text='Вам назначена новая работа\nДля просмотра напишите /current_work')
+        await orm_add_user_work(
+            session,
+            user_id=user_info.user_id,
+            current_work=title_id,
+            task=task,
+            salary=salary,
+            check_work=False
+        )
 
-        if before_added.worker_name == None:
-            await orm_add_work_worker_name(session, title_id, task_and_name)
-        else:
-            await orm_update_work_worker_name(session, title_id, task_and_name)
-        await callback.answer('Выполнено')
-        await callback.message.answer('Работа назначена', reply_markup=reply.admin_kb)
-        await state.clear()
-
-    except Exception as e:
-        await callback.answer(f'Ошибка: {e}')
-        await callback.message.answer(f'Ошибка: {e}', reply_markup=reply.admin_kb)
-        await state.clear()
+    if before_added.worker_name == None:
+        await orm_add_work_worker_name(session, title_id, task_and_name)
+    else:
+        await orm_update_work_worker_name(session, title_id, task_and_name)
+    await callback.answer('Выполнено')
+    await callback.message.answer('Работа назначена', reply_markup=reply.admin_kb)
 
     i = await orm_get_one_work(session, title_id)
     await work_output(callback, session, title_id)      # Вывод работы
@@ -827,80 +896,35 @@ async def add_name(callback: types.CallbackQuery, state: FSMContext, session: As
     work_id = await orm_get_id_send_work(session, i.title)
     if work_id is not None:
         await bot.edit_message_caption(chat_id=int(user_chat), message_id=work_id.id,
-                caption=f"💰 - {i.title}\n💬 - {i.work_comment}\n🗓 - {i.deadline}\n📂 - {i.file_name}\n👉 <a href='{i.file}'> Work Files </a>\n{i.worker_name}",)
-        
+                caption=f"💰 - {i.title}\n💬 - {i.work_comment}\n🗓 - {i.deadline}\n‼️ - {i.complexity}\n📂 - {i.file_name}\n👉 <a href='{i.file}'> Work Files </a>\n{i.worker_name}",)
+    
     # Отправка информации пользователю
-    await bot.send_message(chat_id=user, text='Вам назначена новая работа\nБолее подробно можно узнать написав /current_work')
     if i.image is None:
-            await bot.send_message(chat_id=user, text=f'💰 - {i.title}\n💬 - {i.work_comment}\n🗓 - {i.deadline}\n\n<b>Твоя задача</b>: {task}',
+            await bot.send_message(chat_id=user, text=f'💰 - {i.title}\n💬 - {i.work_comment}\n🗓 - {i.deadline}\n‼️ - {i.complexity}\n\n<b>Твоя задача</b>: {task}',
             parse_mode='HTML')
     else:
-        await bot.send_photo(chat_id=user, photo=i.image, caption=
-                f'💰 - {i.title}\n💬 - {i.work_comment}\n🗓 - {i.deadline}\n📂 - {i.file_name}\n👉 - <a href="{i.file}"> Work Files </a>\n<b>Твоя задача</b>: {task}',
+        await bot.send_photo(chat_id=cap.id, photo=i.image, caption=
+                f'💰 - {i.title}\n💬 - {i.work_comment}\n🗓 - {i.deadline}\n‼️ - {i.complexity}\n📂 - {i.file_name}\n👉 - <a href="{i.file}"> Work Files </a>\n<b>Твоя задача</b>: {task}',
                 parse_mode='HTML')
 
-    user_info = [title_id, task, 'В работе', salary]
+
+    user_info = [title_id, task, 'В работе', i.complexity, salary]
     google_table = GoogleTable()
-    google_table.add_user_work(name=name, data=user_info)
-
-
-@admin_router.message(ChoiceWorker.name)
-async def add_name2(message: types.Message):
-    await message.answer("Необходимо выбрать имя на клавиатуре")
-
-
-###################################################################################################
-
-@admin_router.callback_query(F.data.contains('back_user'))
-@admin_router.callback_query(F.data.contains('@'))
-async def choice_workers_data(callback: types.CallbackQuery, session: AsyncSession):
-    user_name = callback.data.split(' @')[0]
-    user_id = callback.data.split(':')[-1]
-    await callback.message.delete()
-    await callback.answer()
-    user = await orm_get_user_name(session, user_name)
-    if user is None:
-        user = await orm_get_one_user(session, user_id)
-
-    payment = user.payment_details
-    programs = user.work_programs
-    city = user.residence_city
-
-    user_works = []
-    users = await orm_get_users_works(session)          # Получаю всех юзеров с параметром работ
-
-    for user_info in users:                                  # Вход в экземпляр юзера
-        for i in user_info.work:                             # Вход в экземпляр UserID.work и получение данных
-            if i.user_id == user.user_id:
-                user_works.append(i.current_work)
-
-    user_skill = await orm_get_one_user_skills(session, user.user_id)
-    if user_skill is None:
-        role = 'Странник'
-    else:
-        role = user_skill.role
-
-    if user_works == []:
-        user_works.append("У человека нет работ")
-    if payment is None:
-        payment = 'Не указан'
-    if programs is None:
-        programs = 'Не указаны'
-    if city is None:
-        city = 'не из этого мира 👽'
-
-    await callback.message.answer(
-        f'<b>Имя</b>: {user.name}\n<b>Юзернейм</b>: @{user.username}\n<b>{role}</b>\n\n<b>Счет</b>: {payment}\n<b>Программы</b>: {programs}\n<i><b>Город</b></i> - {city}\n\n<b>Ссылка на Яндекс Диск:</b>\n{user.drive}\n<b>Работы сотрудника</b>:\n' + '\n'.join(user_works),
-        reply_markup=get_callback_btns(
-            btns={
-                'Редактировать': f'edit_profile_{user.user_id}',
-                "↩️": f"all_",
-                "➡️": f"next_{user.user_id}"
-            }, sizes=(1, 2)
-        ), disable_web_page_preview=True
-    )
+    google_table.add_user_work(name=cap.name, data=user_info)
 
 #________________________________________________________________________________________________________________________________
+# @admin_router.message(ChoiceWorker.name)
+# async def add_name2(message: types.Message):
+#     await message.answer("Необходимо выбрать имя на клавиатуре")
+
+
+# @admin_router.message(Command('test'))
+# async def test(message: types.Message, session: AsyncSession):
+#     cap = await orm_get_team_captain(session, 'test')
+#     await message.answer(cap.name)
+
+#################################################################################################################################
+
 @admin_router.callback_query(F.data.startswith('next_'))
 async def user_skills(callback: types.CallbackQuery, session: AsyncSession):
     user_id = callback.data.split('_')[-1]
@@ -1187,3 +1211,149 @@ async def send_new_project(message: types.Message, state: FSMContext, bot: Bot):
     await state.clear()
     await message.answer('Отправил файлы', reply_markup=reply.admin_kb)
 
+
+#####################################################################################################################
+class NewTeam(StatesGroup):
+    team_name = State()
+    captain = State()
+    teammates = State()
+    confirm = State()
+
+    workers = []
+#________________________________________________________________________________________________________________________________
+@admin_router.message(or_f(Command('create_team'), F.text == 'Создание команды 🥇'))
+async def cmd_create_team(message: types.Message, state: FSMContext):
+    await message.answer('Напиши название команды')
+    await state.set_state(NewTeam.team_name)
+
+#________________________________________________________________________________________________________________________________
+@admin_router.message(NewTeam.team_name, F.text)
+async def add_team_name(message: types.Message, session: AsyncSession, state: FSMContext):
+    await state.update_data(team_name = message.text)
+    await message.answer('Выбери сотрудника на роль капитана', reply_markup=await choice_worker_btns(session))
+    await state.set_state(NewTeam.captain)
+
+#________________________________________________________________________________________________________________________________
+@admin_router.callback_query(NewTeam.captain, F.data)
+async def add_captain(callback: types.CallbackQuery, session: AsyncSession, state: FSMContext):
+    captain_name = callback.data.split(' @')[0]
+    await state.update_data(captain=captain_name)
+    await callback.answer()
+    await callback.message.delete()
+    await callback.message.answer(f'<b>Отлично, капитан команды: {captain_name}</b>\nТеперь выбери <u>несколько сотрудников</u> в эту команду и нажми "Продолжить"')
+    await asyncio.sleep(1)
+    await callback.message.answer('<b>Список всех сотрудников</b>', reply_markup=await choice_workers_btns(session))
+    await state.set_state(NewTeam.teammates)
+
+#________________________________________________________________________________________________________________________________
+@admin_router.callback_query(NewTeam.teammates, F.data.startswith('worker_'))
+async def add_teammates(callback: types.CallbackQuery, session: AsyncSession, state: FSMContext):
+    name = callback.data.split('_')[-1]
+    NewTeam.workers.append(name)
+    await callback.message.delete()
+    await callback.answer(f'Добавил {name}')
+    workers = '\n'.join(NewTeam.workers)
+    await callback.message.answer(f'<b>Добавил:</b>\n{workers}', reply_markup=await choice_workers_btns(session))
+
+#________________________________________________________________________________________________________________________________
+@admin_router.callback_query(F.data.startswith('continue'))
+async def add_teammates(callback: types.CallbackQuery, state: FSMContext):
+    workers = '\n'.join(NewTeam.workers)
+    data = await state.get_data()
+    captain = data['captain']
+    await callback.answer()
+    await callback.message.answer(f'<u>Оставляем команду в таком составе?</u>\n\n<b>Капитан: {captain}</b>\n{workers}', reply_markup=get_callback_btns(
+                            btns={
+                                'Да': f'confirm_team',
+                                'Нет': f'return_choice'
+                            }
+                        )
+                    )
+    await state.set_state(NewTeam.confirm)
+
+#________________________________________________________________________________________________________________________________
+@admin_router.callback_query(NewTeam.confirm, F.data)
+async def confirmation(callback: types.CallbackQuery, session: AsyncSession, state: FSMContext):
+    await callback.answer()
+    data = await state.get_data()
+    if callback.data == 'return_choice':
+        NewTeam.workers = []
+        await callback.message.answer('<b>Выбери всех сотрудников снова</b>')
+        await callback.message.answer('<b>Список всех сотрудников</b>', reply_markup=await choice_workers_btns(session))
+        return await state.set_state(NewTeam.teammates)
+    
+    user = await orm_get_user_name(session, data['captain'])
+    await orm_add_teams(
+        session,
+        user.user_id,
+        data['captain'],
+        True,
+        data['team_name']
+    )
+
+    for worker in NewTeam.workers:
+        user = await orm_get_user_name(session, worker)
+        await orm_add_teams(
+            session,
+            user.user_id,
+            worker,
+            False,
+            data['team_name']
+        )
+
+    await callback.message.answer('Отлично, добавил команду')
+
+
+
+
+
+###################################################################################################
+
+@admin_router.callback_query(F.data.contains('back_user'))
+@admin_router.callback_query(F.data.contains('@'))
+async def choice_workers_data(callback: types.CallbackQuery, session: AsyncSession):
+    user_name = callback.data.split(' @')[0]
+    user_id = callback.data.split(':')[-1]
+    await callback.message.delete()
+    await callback.answer()
+    user = await orm_get_user_name(session, user_name)
+    if user is None:
+        user = await orm_get_one_user(session, user_id)
+
+    payment = user.payment_details
+    programs = user.work_programs
+    city = user.residence_city
+
+    user_works = []
+    users = await orm_get_users_works(session)          # Получаю всех юзеров с параметром работ
+
+    for user_info in users:                                  # Вход в экземпляр юзера
+        for i in user_info.work:                             # Вход в экземпляр UserID.work и получение данных
+            if i.user_id == user.user_id:
+                user_works.append(i.current_work)
+
+    user_skill = await orm_get_one_user_skills(session, user.user_id)
+    if user_skill is None:
+        role = 'Странник'
+    else:
+        role = user_skill.role
+
+    if user_works == []:
+        user_works.append("У человека нет работ")
+    if payment is None:
+        payment = 'Не указан'
+    if programs is None:
+        programs = 'Не указаны'
+    if city is None:
+        city = 'не из этого мира 👽'
+
+    await callback.message.answer(
+        f'<b>Имя</b>: {user.name}\n<b>Юзернейм</b>: @{user.username}\n<b>{role}</b>\n\n<b>Счет</b>: {payment}\n<b>Программы</b>: {programs}\n<i><b>Город</b></i> - {city}\n\n<b>Ссылка на Яндекс Диск:</b>\n{user.drive}\n<b>Работы сотрудника</b>:\n' + '\n'.join(user_works),
+        reply_markup=get_callback_btns(
+            btns={
+                'Редактировать': f'edit_profile_{user.user_id}',
+                "↩️": f"all_",
+                "➡️": f"next_{user.user_id}"
+            }, sizes=(1, 2)
+        ), disable_web_page_preview=True
+    )

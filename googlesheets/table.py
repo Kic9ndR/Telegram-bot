@@ -65,7 +65,8 @@ class GoogleTable:
         googlesheet_client = self._get_googlesheet_client()
         sheet = googlesheet_client.open_by_url(self.googlesheet_file_url)
         worksheet = sheet.worksheet_by_title(name)
-        return worksheet.append_table(values=data, dimension='ROWS', overwrite=False)
+        return worksheet.insert_rows(row=3, number=1, values=data)  # Добавление строки в начало таблицы
+        # return worksheet.append_table(values=data, dimension='ROWS', overwrite=False) # Добавление строки в конец таблицы
 
 
     def update_user_info(                                                          # Добавляется информация о реквизитах, программах и городе сотрудника 

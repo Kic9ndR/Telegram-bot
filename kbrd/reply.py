@@ -34,7 +34,7 @@ admin_kb = ReplyKeyboardMarkup(
         ],
         [
             KeyboardButton(text='Список работ 📜'),
-            KeyboardButton(text='Добавление проекта 📊'),
+            KeyboardButton(text='Создание команды 🥇'),
         ],
         [
             KeyboardButton(text='Создание задачи ✍🏼'),

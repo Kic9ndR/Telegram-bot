@@ -25,7 +25,7 @@ async def work_output(callback: types.CallbackQuery, session: AsyncSession, work
     elif title.ready_status == False:                                 # Если работа еще не опубликована
         await callback.message.answer_photo(
             title.image,
-            caption=f'{title.title}\nКомментарий: {title.work_comment}\nСрок выполнения: {title.deadline}\nСсылка на файл: <a href="{title.file}"> Work Files </a>\nСписок исполнителей:\n{worker_name}',
+            caption=f'{title.title}\nКомментарий: {title.work_comment}\nСрок выполнения: {title.deadline}\nУровень сложности: {title.complexity}\nСсылка на файл: <a href="{title.file}"> Work Files </a>\nСписок исполнителей:\n{worker_name}',
             reply_markup=get_callback_btns(btns={
                 'Назначить': f'appoint_{title.title}',
                 'Изменить': f'select_{title.title}',
@@ -37,7 +37,7 @@ async def work_output(callback: types.CallbackQuery, session: AsyncSession, work
     else:                                                           # Если уже отправлена в работу
         await callback.message.answer_photo(
             title.image,
-            caption=f'{title.title}\n<b>Комментарий</b>: {title.work_comment}\n<b>Срок выполнения:</b> {title.deadline}\n<b>Ссылка на файл:</b> <a href="{title.file}"> Work Files </a>\n<b>Назначены:</b>\n{worker_name}',
+            caption=f'{title.title}\n<b>Комментарий</b>: {title.work_comment}\n<b>Срок выполнения:</b> {title.deadline}\nУровень сложности: {title.complexity}\n<b>Ссылка на файл:</b> <a href="{title.file}"> Work Files </a>\n<b>Назначены:</b>\n{worker_name}',
             reply_markup=get_callback_btns(btns={
                 'Назначить': f'appoint_{title.title}',
                 'Изменить': f'select_{title.title}',
@@ -69,7 +69,7 @@ async def work_output2(message: types.Message, session: AsyncSession, work: str)
     elif title.ready_status == False:                                 # Если работа еще не опубликована
         await message.answer_photo(
             title.image,
-            caption=f'{title.title}\nКомментарий: {title.work_comment}\nСрок выполнения: {title.deadline}\nСсылка на файл: <a href="{title.file}"> Work Files </a>\nСписок исполнителей:\n{worker_name}',
+            caption=f'{title.title}\nКомментарий: {title.work_comment}\nСрок выполнения: {title.deadline}\nУровень сложности: {title.complexity}\nСсылка на файл: <a href="{title.file}"> Work Files </a>\nСписок исполнителей:\n{worker_name}',
             reply_markup=get_callback_btns(btns={
                 'Назначить': f'appoint_{title.title}',
                 'Изменить': f'select_{title.title}',
@@ -81,7 +81,7 @@ async def work_output2(message: types.Message, session: AsyncSession, work: str)
     else:                                                           # Если уже отправлена в работу
         await message.answer_photo(
             title.image,
-            caption=f'{title.title}\n<b>Комментарий</b>: {title.work_comment}\n<b>Срок выполнения:</b> {title.deadline}\n<b>Ссылка на файл:</b> <a href="{title.file}"> Work Files </a>\n<b>Назначены:</b>\n{worker_name}',
+            caption=f'{title.title}\n<b>Комментарий</b>: {title.work_comment}\n<b>Срок выполнения:</b> {title.deadline}\nУровень сложности: {title.complexity}\n<b>Ссылка на файл:</b> <a href="{title.file}"> Work Files </a>\n<b>Назначены:</b>\n{worker_name}',
             reply_markup=get_callback_btns(btns={
                 'Назначить': f'appoint_{title.title}',
                 'Изменить': f'select_{title.title}',

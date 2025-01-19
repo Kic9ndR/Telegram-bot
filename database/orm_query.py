@@ -167,6 +167,11 @@ async def orm_get_one_user(session: AsyncSession, user_id):
     result = await session.execute(query)
     return result.scalar()
 
+async def orm_get_one_user_by_name(session: AsyncSession, name):
+    query = select(UserID).where(UserID.name == name)
+    result = await session.execute(query)
+    return result.scalar()
+
 
 ############################################## Взаимодействие с работами сотрудников ##############################################
 
@@ -351,6 +356,7 @@ async def orm_add_work(
     title: str,
     work_comment: str,
     deadline: int,
+    complexity: str,
     file_name: str,
     file: str,
     worker_name: str,
@@ -365,6 +371,7 @@ async def orm_add_work(
                 title=title,
                 work_comment=work_comment,
                 deadline=deadline,
+                complexity=complexity,
                 file_name=file_name,
                 file=file,
                 worker_name=worker_name,
@@ -575,3 +582,48 @@ async def orm_delete_id_send_work(session: AsyncSession, id: int):
     query = delete(PublishedWorks).where(PublishedWorks.id == id)
     await session.execute(query)
     await session.commit()
+
+
+############################################## Работа с командами ##############################################
+async def orm_add_teams(
+        session: AsyncSession,
+        id: int,
+        name: str,
+        captain: bool,
+        team_name: str,
+):
+    query = select(EmpTeam).where(EmpTeam.id == id)
+    await session.execute(query)
+    session.add(
+        EmpTeam(
+            id=id,
+            name=name,
+            captain=captain,
+            team_name=team_name,
+        )
+    )
+    await session.commit()
+
+#____________________________________________________________________________________________________________
+async def orm_get_team_emp(session: AsyncSession, id: int):
+    query = select(EmpTeam).where(EmpTeam.id == id)
+    result = await session.execute(query)
+    return result.scalar()
+
+#____________________________________________________________________________________________________________
+async def orm_get_captains(session: AsyncSession):
+    query = select(EmpTeam)
+    result = await session.execute(query)
+    return result.scalars().all()
+
+#____________________________________________________________________________________________________________
+async def orm_get_all_team_emp(session: AsyncSession):
+    query = select(EmpTeam)
+    result = await session.execute(query)
+    return result.scalars().all()
+
+#____________________________________________________________________________________________________________
+async def orm_get_team_captain(session: AsyncSession, team: str):
+    query = select(EmpTeam).where(EmpTeam.team_name == team, EmpTeam.captain == True)
+    result = await session.execute(query)
+    return result.scalar()
