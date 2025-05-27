@@ -95,6 +95,7 @@ class MessageSend(Base):
     user_id: Mapped[int] = mapped_column(unique=False, nullable=False)
     work_link: Mapped[str] = mapped_column(unique=False, nullable=False)
     work_id: Mapped[int] = mapped_column(unique=True, nullable=True)
+    mes_id: Mapped[int] = mapped_column(unique=True, nullable=False)
 
 
 ###################################################################################################################

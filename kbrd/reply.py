@@ -19,6 +19,9 @@ start_kb = ReplyKeyboardMarkup(
         [
             KeyboardButton(text='График работы 🗓'),
         ],
+        [
+            KeyboardButton(text='Моя команда 👨‍👧‍👧'),
+        ],
     ],
     resize_keyboard=True,
     input_field_placeholder="Выберите нужный пункт",
@@ -38,9 +41,6 @@ admin_kb = ReplyKeyboardMarkup(
         ],
         [
             KeyboardButton(text='Создание задачи ✍🏼'),
-        ],
-        [
-            KeyboardButton(text='Быстрая задача 🚀'),
         ],
     ],
     resize_keyboard=True,

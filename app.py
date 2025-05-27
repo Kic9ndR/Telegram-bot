@@ -49,13 +49,40 @@ async def on_startup(bot):
     run_param = False
     if run_param:
         await drop_db()
-    await bot.send_message(chat_id=int(admin_chat), text=
-            f'Бот был перезапущен.\nДля прав администратора нажмите: /add_admin', message_thread_id=int(admin_message_thread))
     await create_db()
 
 async def on_shutdown(bot):
     print("Бот упал :(")
 
+async def delete_webhook_with_retry(bot, max_retries=5):
+    for attempt in range(max_retries):
+        try:
+            # Сначала получаем информацию о текущем вебхуке
+            webhook_info = await bot.get_webhook_info()
+            print(f"Текущий статус вебхука: {webhook_info.url}")
+            
+            if webhook_info.url:
+                # Если вебхук активен, пытаемся его удалить
+                await bot.delete_webhook(drop_pending_updates=True)
+                await asyncio.sleep(2)  # Ждем 2 секунды
+                
+                # Проверяем, удалился ли вебхук
+                webhook_info = await bot.get_webhook_info()
+                if not webhook_info.url:
+                    print("Вебхук успешно удален")
+                    return True
+                else:
+                    print(f"Попытка {attempt + 1}: Вебхук все еще активен")
+            else:
+                print("Вебхук не активен")
+                return True
+                
+        except Exception as e:
+            print(f"Попытка {attempt + 1}: Ошибка при удалении вебхука: {e}")
+        
+        await asyncio.sleep(3)  # Ждем 3 секунды перед следующей попыткой
+    
+    return False
 
 async def main():
     db.startup.register(on_startup)
@@ -64,13 +91,23 @@ async def main():
     db.update.middleware(DateBaseSession(session_pool = session_maker))
     db.message.middleware(AlbumMiddleware())
     await create_db()
-    await bot.delete_webhook(drop_pending_updates=True)
+    
+    # Принудительное удаление вебхука
+    webhook_deleted = await delete_webhook_with_retry(bot)
+    if not webhook_deleted:
+        print("Не удалось удалить вебхук после всех попыток")
+        return
+    
     await bot.set_my_commands(
         commands=private, scope=types.BotCommandScopeAllPrivateChats()
     )
 
+    try:
     await db.start_polling(bot, allowed_updates=db.resolve_used_update_types(), polling_timeout=30)
+    except Exception as e:
+        print(f"Ошибка при запуске бота: {e}")
+        await asyncio.sleep(5)
+        await main()  # Рекурсивный перезапуск
 
-
-
+if __name__ == '__main__':
 asyncio.run(main())

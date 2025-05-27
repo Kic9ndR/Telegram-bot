@@ -1,8 +1,11 @@
 import os
 import random
+import aiohttp
+import validators
 from aiogram import types, Router, F, Bot
 from aiogram.filters import Command, or_f, StateFilter
 from aiogram.types import Message, FSInputFile
+from common.work_output import send_booklet_output, send_booklet_output2
 from filters.chat_types import ChatFilter
 from sqlalchemy.ext.asyncio import AsyncSession
 from aiogram.fsm.state import StatesGroup, State
@@ -19,6 +22,7 @@ user_router = Router()
 user_router.message.filter(ChatFilter(["private"]))
 
 user_chat = os.getenv('USER_CHAT')
+work_check = os.getenv('WORK_CHECK')
 admin_chat = os.getenv('ADMIN_CHAT')
 admin_message_thread = os.getenv('ADMIN_MESSAGE_THREAD')            # Тестовые значение
 message_treads_for_check = os.getenv('MESSAGE_THREAD_FOR_CHECK')
@@ -27,7 +31,7 @@ user_comment = []
 
 async def send_file(message: types.Message):
     user_agreement = FSInputFile(path=os.path.join('user_agreement.docx'))
-    await message.answer_document(document=(user_agreement), caption='<b>Пожалуйста, прочтите и примите <i>пользовательское соглашение</i></b>', reply_markup=get_callback_btns(
+    await message.answer_document(document=(user_agreement), caption='<b>Пожалуйста, прочтите и примите <i>пользовательское соглашение</i></b>', reply_markup=await get_callback_btns(
             btns={
                 'Принять пользовательское соглашение': 'file_accept',
                 }
@@ -115,7 +119,7 @@ async def add_payment(message: types.Message, state: FSMContext):
         await state.update_data(payment_details=AddName.for_change.payment_details)
     else:
         await state.update_data(payment_details=message.text)
-    await message.answer('Выбери программы в которых работаешь:', reply_markup=get_callback_btns(
+    await message.answer('Выбери программы в которых работаешь:', reply_markup=await get_callback_btns(
         btns={
             'Maya': f'Maya',
             '3DMax': f'3DMax',
@@ -124,7 +128,6 @@ async def add_payment(message: types.Message, state: FSMContext):
             'Продолжить ➡️': f'Continue',
         }, sizes=(2,1,2))
     )
-
 
 ########################################################################################################################
 """
@@ -498,6 +501,10 @@ async def send_work_cmd(callback: types.CallbackQuery, state: FSMContext):
 #_________________________________________________________________________________________________
 @user_router.message(SendWork.new_title, F.text)
 async def set_new_title(message: types.Message, state: FSMContext):
+    if len(message.text) > 26: 
+        await message.answer('<b>Передумай</b>. <u>Название не должно превышать 26-ти символов</u>')
+        return await send_work_cmd(types.CallbackQuery, state)
+    
     await state.update_data(choice_work=message.text)
     await message.answer("Оставь комментарий к работе", reply_markup=reply.send_work_kb)
     await state.set_state(SendWork.comment)
@@ -513,82 +520,30 @@ async def send_work_comment(message: types.Message, state: FSMContext):
 @user_router.message(SendWork.work, F.text)
 async def send_work(message: types.Message, state: FSMContext):
     await state.update_data(work=message.text)
-    await message.answer('Прикрепи файл буклета проекта\nЕсли его нет, то отправьте <b>-</b>')
+    await message.answer('Прикрепи файл или ссылку буклета')
     await state.set_state(SendWork.booklet)
 
 #_________________________________________________________________________________________________
+# Для отправки с документом
 @user_router.message(SendWork.booklet, F.document)
 async def send_booklet(message: types.Message, bot: Bot, state: FSMContext, session: AsyncSession):
-    await state.update_data(booklet=message.document)
-    data = await state.get_data()
-    work_link = data['work']
-    work_title = data['choice_work']                        # Название отправляемой работы
-    comment = data["comment"]                               # Комментарий к работе
-    file = data["booklet"]
+    await send_booklet_output(message, bot, state, session, SendWork.work_id)
 
-    send_work = await bot.send_document(chat_id=int(admin_chat), document=file.file_id, caption=
-            f'Работа <i>{work_title}</i> на проверку от @{message.from_user.username}\nКомментарий к работе: {comment}\n\nСсылка на работу:\n{work_link}',
-            message_thread_id=int(admin_message_thread), reply_markup=get_callback_btns(btns={
-                'Принять работу': f"accept_{work_title}_{message.from_user.id}",
-                'Отправить правки': f"edits_{work_title}_{message.from_user.id}"
-            }, sizes={1,1}
-        )
-    )
-    await state.clear()
-    
-    await message.answer('Работа отправлена. Вы Молодец!', reply_markup=reply.start_kb)
-    user = await orm_get_one_user(session, message.from_user.id)    # Получаю юзера
-    work_id = SendWork.work_id
-
-    await orm_add_id_send_message(
-            session,
-            id=send_work.message_id,
-            title=data['choice_work'],
-            user_id=message.from_user.id,
-            work_link=message.text,
-            work_id=work_id
-        )
-    await orm_update_user_status(session, user.user_id, True)       # Изменение статуса проверки на "Проверка" в базе данных
-    await orm_delete_user_date(session, work_id)                    # Убрать время отправки правок
-    
 
 #\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+# Отправки ссылки
 @user_router.message(SendWork.booklet, F.text)
-async def send_booklet(message: types.Message, bot: Bot, state: FSMContext, session: AsyncSession):
-    await state.update_data(booklet=message.document)
-    data = await state.get_data()
-    work_link = data['work']
-    work_title = data['choice_work']                        # Название отправляемой работы
-    comment = data["comment"]                               # Комментарий к работе
-    send_work = await bot.send_message(chat_id=int(admin_chat), text=
-            f'Работа <i>{work_title}</i> на проверку от @{message.from_user.username}\nКомментарий к работе: {comment}\n\nСсылка на работу:\n{work_link}',
-            message_thread_id=int(admin_message_thread), reply_markup=get_callback_btns(btns={
-                'Принять работу': f"accept_{work_title}_{message.from_user.id}",
-                'Отправить правки': f"edits_{work_title}_{message.from_user.id}"
-            }, sizes={1,1}
-        ), disable_web_page_preview=True
-    )
-    await state.clear()
-
-    await message.answer('Работа отправлена. Вы Молодец!', reply_markup=reply.start_kb)
-    user = await orm_get_one_user(session, message.from_user.id)    # Получаю юзера
-    work_id = SendWork.work_id
-
-    await orm_add_id_send_message(
-            session,
-            id=send_work.message_id,
-            title=data['choice_work'],
-            user_id=message.from_user.id,
-            work_link=message.text,
-            work_id=work_id
-        )
-    await orm_update_user_status(session, user.user_id, True)       # Изменение статуса проверки на "Проверка" в базе данных
-    await orm_delete_user_date(session, work_id)                    # Убрать время отправки правок
-
+async def send_booklet2(message: types.Message, bot: Bot, state: FSMContext, session: AsyncSession):
+    if validators.url(message.text) is True:
+        await send_booklet_output2(message, bot, state, session, SendWork.work_id)
+    else:
+        await message.answer('Необходимо загрузить буклет.\n<b>Прикрепи файл или ссылку буклета</b>')
+        return send_booklet(message, bot, state, session)
 
 ###################################################################################################
 @user_router.message(or_f(Command("archival_works"), (F.text.lower() == "архивные работы 🗄️")))
-async def archive_cmd(message: types.Message, session: AsyncSession, bot: Bot):
+async def archive_cmd(message: types.Message, session: AsyncSession, bot: Bot, state: FSMContext):
+    await state.clear()
     user = await orm_get_one_user(session, message.from_user.id)
     if user.accept_processing is False:                   # Проверка пользовательского соглашения
         return await send_file(message)
@@ -639,7 +594,8 @@ async def want_to_work(message: types.Message, bot: Bot, session: AsyncSession):
 
 # ------------------------------------------------------------------------------------------------------
 @user_router.message(or_f(Command("timetable"), (F.text.lower() == "график работы 🗓")))
-async def nav_cal_handler(message: Message, session: AsyncSession):
+async def nav_cal_handler(message: Message, session: AsyncSession, state: FSMContext):
+    await state.clear()
     user_id = message.from_user.id
     user = await orm_get_one_user(session, user_id)
     if user.accept_processing is False:                   # Проверка пользовательского соглашения
@@ -649,7 +605,6 @@ async def nav_cal_handler(message: Message, session: AsyncSession):
         "Таблица с графиком:\nhttps://docs.google.com/spreadsheets/d/1VTlLg0JOvnw-owN4xpzwl7Vl_5vtooEukcCH3phl6Nw", 
         reply_markup=reply.start_kb
     )
-
 
 ##################################################################################################################
 
@@ -686,7 +641,7 @@ async def my_profile2(callback: types.CallbackQuery, session: AsyncSession):
 
     await callback.message.answer(
         f'<b>Имя</b>: {user.name}\n<b>Юзернейм</b>: @{user.username}\n<b>{role}</b>\n\n<b>Счет</b>: {payment}\n<b>Программы</b>: {programs}\n<i><b>Город</b></i> - {city}\n\n<b>Ссылка на Яндекс Диск:</b>\n{user.drive}\n<b>Работы сотрудника</b>:\n' + '\n'.join(user_works),
-        reply_markup=get_callback_btns(
+        reply_markup=await get_callback_btns(
             btns={
                 'Редактировать': f'edit_my_profile_{user.user_id}',
                 "Навыки ➡️": f"go_on:{user.user_id}"
@@ -696,7 +651,8 @@ async def my_profile2(callback: types.CallbackQuery, session: AsyncSession):
 
 #_________________________________________________________________________________________________
 @user_router.message(or_f(Command('my_profile'), (F.text == 'Мой профиль 🪪')))
-async def my_profile(message: types.Message, session: AsyncSession):
+async def my_profile(message: types.Message, session: AsyncSession, state: FSMContext):
+    await state.clear()
     user = await orm_get_one_user(session, message.from_user.id)
     user_skill = await orm_get_one_user_skills(session, message.from_user.id)
     if user.accept_processing is False:                   # Проверка пользовательского соглашения
@@ -729,7 +685,7 @@ async def my_profile(message: types.Message, session: AsyncSession):
 
     await message.answer(
         f'<b>Имя</b>: {user.name}\n<b>Юзернейм</b>: @{user.username}\n<b>{role}</b>\n\n<b>Счет</b>: {payment}\n<b>Программы</b>: {programs}\n<i><b>Город</b></i> - {city}\n\n<b>Ссылка на Яндекс Диск:</b>\n{user.drive}\n<b>Работы сотрудника</b>:\n' + '\n'.join(user_works),
-        reply_markup=get_callback_btns(
+        reply_markup=await get_callback_btns(
             btns={
                 'Редактировать': f'edit_my_profile_{user.user_id}',
                 "Навыки ➡️": f"go_on:{user.user_id}"
@@ -745,7 +701,7 @@ async def user_skills(callback: types.CallbackQuery, session: AsyncSession):
     user_info = await orm_get_one_user_skills(session, user_id)
 
     if user_info is None:
-        await callback.message.answer('Навыки еще не добавлены\nАдминистратор в <i>ближайшее время</i> добавит твои навыки', reply_markup=get_callback_btns(
+        await callback.message.answer('Навыки еще не добавлены\nАдминистратор в <i>ближайшее время</i> добавит твои навыки', reply_markup=await get_callback_btns(
             btns={
                 '⬅️ Профиль': f'profile_{user_id}'
                 }
@@ -755,7 +711,7 @@ async def user_skills(callback: types.CallbackQuery, session: AsyncSession):
     user_skill = user_info.modeling.replace(';', '\n• ')
     skill_grade = user_skill.replace(':', ' - ')
     await callback.message.answer(
-        f'<b>Моделирование</b>:\n• {skill_grade}\n\n<b>Особые навыки</b>\n• {user_spec_skill}', reply_markup=get_callback_btns(
+        f'<b>Моделирование</b>:\n• {skill_grade}\n\n<b>Особые навыки</b>\n• {user_spec_skill}', reply_markup=await get_callback_btns(
             btns={
                 "⬅️ Профиль": f'profile_{user_id}',
             }
@@ -767,7 +723,7 @@ async def edit_my_profile(callback: types.CallbackQuery, session: AsyncSession, 
     user_id = callback.data.split('_')[-1]
     await callback.answer()
     await callback.message.answer(
-        '<b>Выбери своего бойца!</b>', reply_markup=get_callback_btns(
+        '<b>Выбери своего бойца!</b>', reply_markup=await get_callback_btns(
             btns={
                 'Наемник': f'role_mercenary_{user_id}',
                 'Приключенец': f'role_adventure_{user_id}',
@@ -807,14 +763,20 @@ async def accept_file(callback: types.CallbackQuery, session: AsyncSession):
 
 
 ##################################################################################################################
-@user_router.message(Command('my_team'))
-async def my_team(message: types.Message, session: AsyncSession):
+@user_router.message(or_f(Command('my_team'), F.text == 'Моя команда 👨‍👧‍👧'))
+async def my_team(message: types.Message, session: AsyncSession, state: FSMContext):
+    await state.clear()
     emp_list = []
-    for worker in await orm_get_all_team_emp(session):
-        if worker.captain is True:
-            emp_list.insert(0, f'{worker.name} 🥇')
+    
+    emp = await orm_get_team_emp(session, message.from_user.id)
+    if emp is None:
+        return await message.answer('У Вас еще нет команды 😢')
+
+    for teammate in await orm_get_teammates(session, emp.team_name):
+        if teammate.captain is True:
+            emp_list.insert(0, f'{teammate.name} 🥇')
         else:
-            emp_list.append(worker.name)
+            emp_list.append(teammate.name)
     workers = '\n'.join(emp_list)
 
     works = []
@@ -824,12 +786,15 @@ async def my_team(message: types.Message, session: AsyncSession):
 
     for captain in await orm_get_captains(session):
         if message.from_user.id == captain.id:
-            await message.answer(f'Состав команды 👨‍👧‍👧:\n{workers}\n\nТекущие работы 🚀:\n🏠 {works_list}', reply_markup=get_callback_btns(
+            return await message.answer(f'Состав команды 👨‍👧‍👧:\n{workers}\n\nТекущие работы 🚀:\n🏠 {works_list}', reply_markup=await get_callback_btns(
                 btns={
                     'Распределение задач': f'assign_tasks',
                 }, sizes=(1,1)
             )
         )
+    else:
+        await message.answer(f'Состав команды 👨‍👧‍👧:\n{workers}\n\nТекущие работы 🚀:\n🏠 {works_list}')
+
 
 #______________________________________________________________________________________________________________________
 @user_router.callback_query(F.data == 'assign_tasks')
@@ -837,3 +802,27 @@ async def assign_tasks(callback: types.CallbackQuery, session: AsyncSession):
     await callback.answer()
     await callback.message.answer('Выбери работы из списка', reply_markup=await captain_works(session, callback.from_user.id))
 
+
+@user_router.message(Command('work_check'))
+async def test_work_check(message: types.Message):
+    data = {
+        'title': 'Test',
+        'work_link': 'https://yandex.ru',
+        'booklet': '-',
+    }
+
+    key = os.getenv('SITE_KEY')
+    # Отправляем POST-запрос на ваш сайт
+    async with aiohttp.ClientSession() as session:
+        try:
+            response = await session.post(
+                "http://127.0.0.1:8000/api/telegram/message",
+                json=data,
+                headers={"X-API-Key": key}
+            )
+            if response.status == 200:
+                await message.answer("✅ Сообщение сохранено на сайте!")
+            else:
+                await message.answer("❌ Ошибка при сохранении.")
+        except Exception as e:
+            await message.answer(f"⚠️ Ошибка: {str(e)}")
